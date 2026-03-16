@@ -1,720 +1,1075 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pin and Throw Makati</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="styles.css">
-    <style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <style></style>
+  </head>
 
-    </style>
-
-
-</head>
-
-<body>
-
+  <body>
     <nav>
-        <div class="nav-logo-wrap">
-            <img src="resources/logo (2).png" alt="Pin and Throw" class="nav-logo-img">
+      <div class="nav-logo-wrap">
+        <img
+          src="resources/logo (2).png"
+          alt="Pin and Throw"
+          class="nav-logo-img"
+        />
+      </div>
+      <div class="nav-right" id="navRight">
+        <a href="login.php" class="nav-login-btn" id="navLoginBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle
+              cx="12"
+              cy="8"
+              r="4"
+              stroke="#fff"
+              stroke-width="1.8"
+              fill="none"
+            />
+            <path
+              d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+              stroke="#fff"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              fill="none"
+            />
+          </svg>
+          Guest
+        </a>
+        <div class="nav-user-wrap" id="navUserWrap" style="display: none">
+          <span class="nav-user-name" id="navUserName"></span>
+          <img
+            src=""
+            alt="avatar"
+            class="nav-avatar-img"
+            id="navAvatarImg"
+            style="display: none"
+          />
+          <div
+            class="nav-avatar-placeholder"
+            id="navAvatarPlaceholder"
+            style="display: none"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" fill="rgba(255,255,255,0.8)" />
+              <path
+                d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+                stroke="rgba(255,255,255,0.8)"
+                stroke-width="2"
+                stroke-linecap="round"
+                fill="none"
+              />
+            </svg>
+          </div>
+          <button class="nav-logout-btn" onclick="doLogout()">Logout</button>
         </div>
-        <div class="nav-right" id="navRight">
-            Welcome
-            <a href="login.php" class="nav-login-btn" id="navLoginBtn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="4" stroke="#fff" stroke-width="1.8" fill="none"/>
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-      </svg> Guest
-            </a>
-            <div class="nav-user-wrap" id="navUserWrap" style="display:none;">
-                <span class="nav-user-name" id="navUserName"></span>
-                <img src="" alt="avatar" class="nav-avatar-img" id="navAvatarImg" style="display:none;">
-                <div class="nav-avatar-placeholder" id="navAvatarPlaceholder" style="display:none;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="8" r="4" fill="rgba(255,255,255,0.8)"/>
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round" fill="none"/>
-        </svg>
-                </div>
-                <button class="nav-logout-btn" onclick="doLogout()">Logout</button>
-            </div>
-        </div>
+      </div>
     </nav>
 
     <div class="hero" id="heroSection">
-        <div class="hero-logo-wrap">
-            <img src="resources/logo.png" alt="Pin and Throw" class="hero-logo-img">
-        </div>
+      <div class="hero-logo-wrap">
+        <img
+          src="resources/logo.png"
+          alt="Pin and Throw"
+          class="hero-logo-img"
+        />
+      </div>
     </div>
 
     <div class="about" id="aboutSection">
-        <p>Welcome to Pin and Throw, a community-based digital waste-reporting system designed to bridge the communication gap between local residents and officials. In many urban vicinities, unmanaged garbage often lingers on sidewalks, creating "indecent
-            areas" that pose environmental health risks and lead to clogged drainage systems. Our platform empowers residents to take an active role in maintaining their community's cleanliness by pinning the exact locations of waste hotspots on an interactive
-            map.
-        </p>
-        <p>To ensure high accountability and prevent fraudulent submissions, Pin and Throw requires users to upload photographic evidence for every report. This real-time information is immediately transmitted to a centralized dashboard for barangay officers,
-            allowing them to assess, verify, and track the progress of cleanup operations. By streamlining communication, our system ensures that waste is addressed rapidly, helping to mitigate flood risks and promote overall urban organization.</p>
-        <p>This initiative is deeply rooted in supporting the United Nations Sustainable Development Goals, specifically Goal 11: Sustainable Cities and Communities and Goal 16: Peace, Justice, and Strong Institutions. Initially focused on addressing challenges
-            within Barangay Pio Del Pilar, Pin and Throw seeks to create a cleaner, safer, and more organized environment for all.</p>
+      <p>
+        Welcome to Pin and Throw, a community-based digital waste-reporting
+        system designed to bridge the communication gap between local residents
+        and officials. In many urban vicinities, unmanaged garbage often lingers
+        on sidewalks, creating "indecent areas" that pose environmental health
+        risks and lead to clogged drainage systems. Our platform empowers
+        residents to take an active role in maintaining their community's
+        cleanliness by pinning the exact locations of waste hotspots on an
+        interactive map.
+      </p>
+      <p>
+        To ensure high accountability and prevent fraudulent submissions, Pin
+        and Throw requires users to upload photographic evidence for every
+        report. This real-time information is immediately transmitted to a
+        centralized dashboard for barangay officers, allowing them to assess,
+        verify, and track the progress of cleanup operations. By streamlining
+        communication, our system ensures that waste is addressed rapidly,
+        helping to mitigate flood risks and promote overall urban organization.
+      </p>
+      <p>
+        This initiative is deeply rooted in supporting the United Nations
+        Sustainable Development Goals, specifically Goal 11: Sustainable Cities
+        and Communities and Goal 16: Peace, Justice, and Strong Institutions.
+        Initially focused on addressing challenges within Barangay Pio Del
+        Pilar, Pin and Throw seeks to create a cleaner, safer, and more
+        organized environment for all.
+      </p>
     </div>
-    <br><br>
+    <br /><br />
     <div class="report-section">
-        <div class="report-cta">See a trash? Report it now!</div>
+      <div class="report-cta">See a trash? Report it now!</div>
 
-        <div class="form-card">
-            <div class="form-row">
-                <div class="field">
-                    <label class="field-label">Name</label>
-                    <input type="text" id="inputName" placeholder="Your full name">
-                </div>
-                <div class="field">
-                    <label class="field-label">Block/Lot/Unit, Street, Barangay, City</label>
-                    <input type="text" id="inputAddress" placeholder="Exact address">
-                </div>
-            </div>
-
-            <div class="main-inputs">
-                <div>
-                    <br>
-                    <label class="field-label">Description / Complain</label>
-                    <div class="desc-waste-wrap">
-                        <textarea id="inputDesc" placeholder="Describe the waste issue..." rows="3"></textarea>
-                        <span class="section-label-inline">Type of Waste</span>
-                        <div style="display:flex;align-items:center;">
-                            <span class="waste-chevron">&#9660;</span>
-                            <div class="waste-dropdown-header" id="wasteDropHeader" onclick="toggleWasteDropdown()">
-                                <span id="wasteSelected" style="font-family:'DM Mono',monospace;letter-spacing:.5px;">T y p e &nbsp; o f &nbsp; W a s t e</span>
-                                <div class="chevron"></div>
-                            </div>
-                        </div>
-                        <div class="waste-options" id="wasteOptions">
-                            <div class="waste-option" onclick="selectWaste('Hazardous')">Hazardous <span class="check">&#10003;</span></div>
-                            <div class="waste-option" onclick="selectWaste('Pharmaceutical')">Pharmaceutical <span class="check">&#10003;</span></div>
-                            <div class="waste-option" onclick="selectWaste('Electrical')">Electrical <span class="check">&#10003;</span></div>
-                            <div class="waste-option" onclick="selectWaste('Non-Segregated')">Non-Segregated <span class="check">&#10003;</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <br>
-                    <label class="field-label">Map Pin</label>
-                    <div class="map-box" id="mapBox">
-                        <div id="leafletMap"></div>
-                        <div class="map-label-tag">MAP PIN</div>
-                        <div class="map-coords" id="mapCoords"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-bottom:4px;">
-                <br>
-                <label class="photo-upload-label">Upload Photo</label>
-                <div class="photo-drop" id="photoDrop">
-                    <input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotoUpload(event)">
-                    <span class="upload-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
-            <circle cx="8.5" cy="8.5" r="1.5" fill="rgba(255,255,255,0.7)"/>
-            <path d="M3 15l5-5 4 4 3-3 6 6" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </span>
-                    <span class="upload-text">Click or drag photo here</span>
-                </div>
-                <div class="photo-previews" id="photoPreviews"></div>
-            </div>
-
-            <div class="btn-row">
-                <div>
-                    <button class="btn btn-ghost" onclick="openHistoryModal()">Report History</button>
-                    <div class="report-history-hint" id="historyHint">*Login to view report history and track reports</div>
-                </div>
-                <button class="btn btn-track" onclick="openTrackModal()">Track Report</button>
-                <div class="btn-row-right">
-                    <button class="btn btn-clear" onclick="clearForm()">Clear</button>
-                    <button class="btn btn-submit" onclick="submitReport()">Submit</button>
-                </div>
-            </div>
+      <div class="form-card">
+        <div class="form-row">
+          <div class="field">
+            <label class="field-label">Name</label>
+            <input type="text" id="inputName" placeholder="Your full name" />
+          </div>
+          <div class="field">
+            <label class="field-label"
+              >Block/Lot/Unit, Street, Barangay, City</label
+            >
+            <input type="text" id="inputAddress" placeholder="Exact address" autocomplete="off" />
+            <div id="addressSuggestions" class="address-suggest-list" style="display:none;"></div>
+          </div>
         </div>
+
+        <div class="main-inputs">
+          <div>
+            <br />
+            <label class="field-label">Description / Complain</label>
+            <div class="desc-waste-wrap">
+              <textarea
+                id="inputDesc"
+                placeholder="Describe the waste issue..."
+                rows="3"
+              ></textarea>
+              <span class="section-label-inline">Type of Waste</span>
+              <div style="display: flex; align-items: center">
+                <span class="waste-chevron">&#9660;</span>
+                <div
+                  class="waste-dropdown-header"
+                  id="wasteDropHeader"
+                  onclick="toggleWasteDropdown()"
+                >
+                  <span
+                    id="wasteSelected"
+                    style="
+                      font-family: 'DM Mono', monospace;
+                      letter-spacing: 0.5px;
+                    "
+                    >T y p e &nbsp; o f &nbsp; W a s t e</span
+                  >
+                  <div class="chevron"></div>
+                </div>
+              </div>
+              <div class="waste-options" id="wasteOptions">
+                <div class="waste-option" onclick="selectWaste('Hazardous')">
+                  Hazardous <span class="check">&#10003;</span>
+                </div>
+                <div
+                  class="waste-option"
+                  onclick="selectWaste('Pharmaceutical')"
+                >
+                  Pharmaceutical <span class="check">&#10003;</span>
+                </div>
+                <div class="waste-option" onclick="selectWaste('Electrical')">
+                  Electrical <span class="check">&#10003;</span>
+                </div>
+                <div
+                  class="waste-option"
+                  onclick="selectWaste('Non-Segregated')"
+                >
+                  Non-Segregated <span class="check">&#10003;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <br />
+            <label class="field-label">Map Pin</label>
+            <div class="map-box" id="mapBox">
+              <div id="leafletMap"></div>
+              <div class="map-label-tag">MAP PIN</div>
+              <div class="map-coords" id="mapCoords"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 4px">
+          <br />
+          <label class="photo-upload-label">Upload Photo</label>
+          <div class="photo-drop" id="photoDrop">
+            <input
+              type="file"
+              id="photoInput"
+              accept="image/*"
+              multiple
+              onchange="handlePhotoUpload(event)"
+            />
+            <span class="upload-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  stroke="rgba(255,255,255,0.7)"
+                  stroke-width="1.5"
+                />
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                  fill="rgba(255,255,255,0.7)"
+                />
+                <path
+                  d="M3 15l5-5 4 4 3-3 6 6"
+                  stroke="rgba(255,255,255,0.7)"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="upload-text">Click or drag photo here</span>
+          </div>
+          <div class="photo-previews" id="photoPreviews"></div>
+        </div>
+
+        <div class="btn-row">
+          <div>
+            <button class="btn btn-ghost" onclick="openHistoryModal()">
+              Report History
+            </button>
+            <div class="report-history-hint" id="historyHint">
+              *Login to view report history and track reports
+            </div>
+          </div>
+          <button class="btn btn-track" onclick="openTrackModal()">
+            Track Report
+          </button>
+          <div class="btn-row-right">
+            <button class="btn btn-clear" onclick="clearForm()">Clear</button>
+            <button class="btn btn-submit" onclick="submitReport()">
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="help-section">
-        <button class="help-btn" onclick="openHelpModal()">
-    <div class="help-circle">?</div>
-    Need Help?
-  </button>
+      <button class="help-btn" onclick="openHelpModal()">
+        <div class="help-circle">?</div>
+        Need Help?
+      </button>
     </div>
 
     <footer>
-        <div class="footer-logo">
-            <img src="resources/PIODELPILAR.webp" alt="Barangay Pio Del Pilar" class="footer-seal-img">
-            <span>Brgy. Pio Del Pilar</span>
-        </div>
-        <div class="footer-logo">
-            <img src="resources/MapuaUniv_logo_vertical.png" alt="Mapua University" class="footer-seal-img footer-seal-mapua">
-            <span>Mapua University</span>
-        </div>
+      <div class="footer-logo">
+        <img
+          src="resources/PIODELPILAR.webp"
+          alt="Barangay Pio Del Pilar"
+          class="footer-seal-img"
+        />
+        <span>Brgy. Pio Del Pilar</span>
+      </div>
+      <div class="footer-logo">
+        <img
+          src="resources/MapuaUniv_logo_vertical.png"
+          alt="Mapua University"
+          class="footer-seal-img footer-seal-mapua"
+        />
+        <span>Mapua University</span>
+      </div>
     </footer>
 
     <div class="modal-overlay" id="helpModal">
-        <div class="modal">
-            <h3>Need Help?</h3>
-            <p>To submit a waste report, fill in your name, address, describe the waste issue, select a waste type, click the map to pin the location, and upload a photo as evidence.</p>
-            <p>For assistance, contact the Barangay Pio Del Pilar office or visit the Barangay Hall, Pio Del Pilar, Makati City.</p>
-            <button class="modal-close" onclick="closeModal('helpModal')">Got it</button>
-        </div>
+      <div class="modal">
+        <h3>Need Help?</h3>
+        <p>
+          To submit a waste report, fill in your name, address, describe the
+          waste issue, select a waste type, click the map to pin the location,
+          and optionally upload photo evidence.
+        </p>
+        <p>
+          For assistance, contact the Barangay Pio Del Pilar office or visit the
+          Barangay Hall, Pio Del Pilar, Makati City.
+        </p>
+        <button class="modal-close" onclick="closeModal('helpModal')">
+          Got it
+        </button>
+      </div>
     </div>
 
     <div class="modal-overlay" id="trackModal">
-        <div class="modal">
-            <h3>Track Your Report</h3>
-            <p>Enter your Report ID to check the current status of your submitted report.</p>
-            <div style="margin-bottom:12px;">
-                <label class="field-label" style="color:rgba(255,255,255,0.55);text-align:left;">Report ID</label>
-                <input type="text" id="trackInput" placeholder="e.g. RPT-0001" style="background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.25);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 13px;border-radius:8px;outline:none;width:100%;">
-            </div>
-            <div class="track-result" id="trackResult">
-                <div class="track-id" id="trackResultId"></div>
-                <div class="track-status" id="trackResultStatus"></div>
-                <div class="track-msg" id="trackResultMsg"></div>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button class="modal-close" style="flex:1;" onclick="doTrack()">Search</button>
-                <button class="modal-close" style="flex:1;background:rgba(255,255,255,0.10);" onclick="closeModal('trackModal')">Close</button>
-            </div>
+      <div class="modal">
+        <h3>Track Your Report</h3>
+        <p>
+          Enter your Report ID to check the current status of your submitted
+          report.
+        </p>
+        <div style="margin-bottom: 12px">
+          <label
+            class="field-label"
+            style="color: rgba(255, 255, 255, 0.55); text-align: left"
+            >Report ID</label
+          >
+          <input
+            type="text"
+            id="trackInput"
+            placeholder="e.g. RPT-0001"
+            style="
+              background: rgba(0, 0, 0, 0.25);
+              border: 1px solid rgba(255, 255, 255, 0.25);
+              color: #fff;
+              font-family: 'DM Sans', sans-serif;
+              font-size: 13px;
+              padding: 10px 13px;
+              border-radius: 8px;
+              outline: none;
+              width: 100%;
+            "
+          />
         </div>
+        <div class="track-result" id="trackResult">
+          <div class="track-id" id="trackResultId"></div>
+          <div class="track-status" id="trackResultStatus"></div>
+          <div class="track-msg" id="trackResultMsg"></div>
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button class="modal-close" style="flex: 1" onclick="doTrack()">
+            Search
+          </button>
+          <button
+            class="modal-close"
+            style="flex: 1; background: rgba(255, 255, 255, 0.1)"
+            onclick="closeModal('trackModal')"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-overlay" id="historyModal">
-        <div class="modal" style="max-width:400px;">
-            <h3>Report History</h3>
-            <div class="history-list" id="historyList"></div>
-            <button class="modal-close" onclick="closeModal('historyModal')">Close</button>
-        </div>
+      <div class="modal" style="max-width: 400px">
+        <h3>Report History</h3>
+        <div class="history-list" id="historyList"></div>
+        <button class="modal-close" onclick="closeModal('historyModal')">
+          Close
+        </button>
+      </div>
     </div>
 
     <div class="toast" id="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+      var session = null;
+      var selectedWaste = "";
+      var pinnedLatLng = null;
+      var mapInstance = null;
+      var mapMarker = null;
+      var reports = [];
+      var selectedPhotos = [];
+      var MAX_PHOTOS = 5;
+      var activeAddressLookup = 0;
+      var activeAddressSuggestLookup = 0;
+      var WASTE_CATEGORY_MAP = {
+        Hazardous: 1,
+        Pharmaceutical: 2,
+        Electrical: 3,
+        "Non-Segregated": 4,
+      };
 
-        var session = null;
-        var selectedWaste = '';
-        var pinnedLatLng = null;
-        var mapInstance = null;
-        var mapMarker = null;
-        var reports = [];
-        var selectedPhotos = [];
-        var MAX_PHOTOS = 5;
-        var activeAddressLookup = 0;
-        var WASTE_CATEGORY_MAP = {
-            'Hazardous': 1,
-            'Pharmaceutical': 2,
-            'Electrical': 3,
-            'Non-Segregated': 4
+      function formatReportId(reportId) {
+        return "RPT-" + String(reportId).padStart(4, "0");
+      }
+
+      function normalizeStatus(status) {
+        return String(status || "").toLowerCase();
+      }
+
+      function getStatusLabel(status) {
+        var labels = {
+          pending: "Pending",
+          verified: "Verified",
+          inprogress: "In Progress",
+          resolved: "Resolved",
+          rejected: "Rejected",
         };
+        return labels[normalizeStatus(status)] || "Unknown";
+      }
 
-        function formatReportId(reportId) {
-            return 'RPT-' + String(reportId).padStart(4, '0');
+      function getStatusMessage(status) {
+        var messages = {
+          pending: "Your report is waiting for officer review.",
+          verified: "Your report has been verified by the barangay.",
+          inprogress: "A cleanup crew has been dispatched to your location.",
+          resolved: "This report has been resolved. Thank you.",
+          rejected:
+            "This report was not actionable. Please resubmit with more detail.",
+        };
+        return (
+          messages[normalizeStatus(status)] || "No status update available yet."
+        );
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function mapReportFromApi(item) {
+        return {
+          id: formatReportId(item.report_ID),
+          numericId: Number(item.report_ID),
+          address: item.locationName || "Unknown location",
+          desc: item.description || "",
+          waste: item.categoryName || "",
+          lat: item.latitude || "",
+          lng: item.longitude || "",
+          status: normalizeStatus(item.status),
+          date: item.timestamp
+            ? new Date(item.timestamp).toLocaleDateString("en-PH", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "",
+          timestamp: item.timestamp || "",
+          imageUrl: item.imageUrl || "",
+        };
+      }
+
+      function loadResidentReports() {
+        if (!session || !session.email) {
+          reports = [];
+          return Promise.resolve([]);
         }
 
-        function normalizeStatus(status) {
-            return String(status || '').toLowerCase();
-        }
-
-        function getStatusLabel(status) {
-            var labels = {
-                pending: 'Pending',
-                verified: 'Verified',
-                inprogress: 'In Progress',
-                resolved: 'Resolved',
-                rejected: 'Rejected'
-            };
-            return labels[normalizeStatus(status)] || 'Unknown';
-        }
-
-        function getStatusMessage(status) {
-            var messages = {
-                pending: 'Your report is waiting for officer review.',
-                verified: 'Your report has been verified by the barangay.',
-                inprogress: 'A cleanup crew has been dispatched to your location.',
-                resolved: 'This report has been resolved. Thank you.',
-                rejected: 'This report was not actionable. Please resubmit with more detail.'
-            };
-            return messages[normalizeStatus(status)] || 'No status update available yet.';
-        }
-
-        function escapeHtml(value) {
-            return String(value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function mapReportFromApi(item) {
-            return {
-                id: formatReportId(item.report_ID),
-                numericId: Number(item.report_ID),
-                address: item.locationName || 'Unknown location',
-                desc: item.description || '',
-                waste: item.categoryName || '',
-                lat: item.latitude || '',
-                lng: item.longitude || '',
-                status: normalizeStatus(item.status),
-                date: item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-PH', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                }) : '',
-                timestamp: item.timestamp || '',
-                imageUrl: item.imageUrl || ''
-            };
-        }
-
-        function loadResidentReports() {
-            if (!session || !session.email) {
-                reports = [];
-                return Promise.resolve([]);
+        return fetch(
+          "get_report.php?resident_email=" + encodeURIComponent(session.email),
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        )
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            if (!data || data.status !== "success") {
+              throw new Error(
+                data && data.message
+                  ? data.message
+                  : "Failed to load resident reports."
+              );
             }
 
-            return fetch('get_report.php?resident_email=' + encodeURIComponent(session.email), {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }).then(function(res) {
-                return res.json();
-            }).then(function(data) {
-                if (!data || data.status !== 'success') {
-                    throw new Error((data && data.message) ? data.message : 'Failed to load resident reports.');
-                }
+            reports = (data.data || []).map(mapReportFromApi);
+            return reports;
+          })
+          .catch(function (err) {
+            reports = [];
+            console.error(err);
+            return [];
+          });
+      }
 
-                reports = (data.data || []).map(mapReportFromApi);
-                return reports;
-            }).catch(function(err) {
-                reports = [];
-                console.error(err);
-                return [];
-            });
-        }
+      function reverseGeocodePin(lat, lng) {
+        activeAddressLookup += 1;
+        var lookupId = activeAddressLookup;
+        var addressField = document.getElementById("inputAddress");
+        addressField.value = "Resolving pinned address...";
 
-        function reverseGeocodePin(lat, lng) {
-            activeAddressLookup += 1;
-            var lookupId = activeAddressLookup;
-            var addressField = document.getElementById('inputAddress');
-            addressField.value = 'Resolving pinned address...';
-
-            var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&zoom=18&addressdetails=1';
-            return fetch(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Accept-Language': 'en'
-                }
-            }).then(function(res) {
-                if (!res.ok) {
-                    throw new Error('Address lookup failed.');
-                }
-                return res.json();
-            }).then(function(data) {
-                if (lookupId !== activeAddressLookup) {
-                    return;
-                }
-
-                var address = data && data.address ? data.address : {};
-                var parts = [
-                    address.house_number,
-                    address.road,
-                    address.suburb || address.neighbourhood || address.quarter,
-                    address.city_district || address.city || address.town || address.village,
-                    address.state,
-                    address.postcode
-                ].filter(Boolean);
-
-                addressField.value = parts.join(', ') || data.display_name || (lat.toFixed(5) + ', ' + lng.toFixed(5));
-            }).catch(function() {
-                if (lookupId !== activeAddressLookup) {
-                    return;
-                }
-                addressField.value = lat.toFixed(5) + ', ' + lng.toFixed(5);
-                showToast('Pinned location saved, but the address lookup failed.', true);
-            });
-        }
-
-        function initSession() {
-            var raw = localStorage.getItem('pat_session');
-            if (raw) {
-                session = JSON.parse(raw);
-                document.getElementById('navLoginBtn').style.display = 'none';
-                document.getElementById('navUserWrap').style.display = 'flex';
-                document.getElementById('navUserName').innerHTML = 'Welcome <strong>' + session.name + '</strong>';
-                if (session.avatar) {
-                    var img = document.getElementById('navAvatarImg');
-                    img.src = session.avatar;
-                    img.style.display = 'block';
-                } else {
-                    document.getElementById('navAvatarPlaceholder').style.display = 'flex';
-                }
-                document.getElementById('aboutSection').style.display = 'none';
-                document.getElementById('historyHint').style.display = 'none';
-                document.getElementById('inputName').value = session.name;
-                loadResidentReports();
+        var url =
+          "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" +
+          encodeURIComponent(lat) +
+          "&lon=" +
+          encodeURIComponent(lng) +
+          "&zoom=18&addressdetails=1";
+        return fetch(url, {
+          headers: {
+            Accept: "application/json",
+            "Accept-Language": "en",
+          },
+        })
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error("Address lookup failed.");
             }
-        }
-
-        function doLogout() {
-            localStorage.removeItem('pat_session');
-            window.location.reload();
-        }
-
-        function initMap() {
-            var map = L.map('leafletMap', {
-                zoomControl: true
-            }).setView([14.5547, 121.0244], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                maxZoom: 19
-            }).addTo(map);
-
-            var pinIcon = L.divIcon({
-                className: '',
-                html: '<div style="width:18px;height:18px;background:#e53e3e;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>',
-                iconSize: [18, 18],
-                iconAnchor: [9, 18]
-            });
-
-            map.on('click', function(e) {
-                pinnedLatLng = e.latlng;
-                if (mapMarker) {
-                    map.removeLayer(mapMarker);
-                }
-                mapMarker = L.marker(e.latlng, {
-                    icon: pinIcon
-                }).addTo(map);
-                var coordEl = document.getElementById('mapCoords');
-                coordEl.textContent = e.latlng.lat.toFixed(5) + ' N, ' + e.latlng.lng.toFixed(5) + ' E';
-                coordEl.style.display = 'block';
-                reverseGeocodePin(e.latlng.lat, e.latlng.lng);
-            });
-
-            mapInstance = map;
-            setTimeout(function() {
-                map.invalidateSize();
-            }, 300);
-        }
-
-        function toggleWasteDropdown() {
-            document.getElementById('wasteDropHeader').classList.toggle('open');
-            document.getElementById('wasteOptions').classList.toggle('open');
-        }
-
-        function selectWaste(type) {
-            selectedWaste = type;
-            var header = document.getElementById('wasteDropHeader');
-            document.getElementById('wasteSelected').textContent = type;
-            document.getElementById('wasteSelected').style.fontFamily = "'DM Sans', sans-serif";
-            document.getElementById('wasteSelected').style.letterSpacing = 'normal';
-            header.classList.add('selected');
-            header.classList.remove('open');
-            document.getElementById('wasteOptions').classList.remove('open');
-            document.querySelectorAll('.waste-option').forEach(function(opt) {
-                opt.classList.toggle('selected', opt.textContent.trim().startsWith(type));
-            });
-        }
-
-        document.addEventListener('click', function(e) {
-            var wrap = document.querySelector('.desc-waste-wrap');
-            if (wrap && !wrap.contains(e.target)) {
-                document.getElementById('wasteDropHeader').classList.remove('open');
-                document.getElementById('wasteOptions').classList.remove('open');
+            return res.json();
+          })
+          .then(function (data) {
+            if (lookupId !== activeAddressLookup) {
+              return;
             }
+
+            var address = data && data.address ? data.address : {};
+            var parts = [
+              address.house_number,
+              address.road,
+              address.suburb || address.neighbourhood || address.quarter,
+              address.city_district ||
+                address.city ||
+                address.town ||
+                address.village,
+              address.state,
+              address.postcode,
+            ].filter(Boolean);
+
+            addressField.value =
+              parts.join(", ") ||
+              data.display_name ||
+              lat.toFixed(5) + ", " + lng.toFixed(5);
+          })
+          .catch(function () {
+            if (lookupId !== activeAddressLookup) {
+              return;
+            }
+            addressField.value = lat.toFixed(5) + ", " + lng.toFixed(5);
+            showToast(
+              "Pinned location saved, but the address lookup failed.",
+              true
+            );
+          });
+      }
+
+      function buildNominatimSearchUrl(query) {
+        var base = "https://nominatim.openstreetmap.org/search";
+        var params = new URLSearchParams({
+          format: "jsonv2",
+          q: query,
+          addressdetails: "1",
+          limit: "5",
+          countrycodes: "ph"
+        });
+        return base + "?" + params.toString();
+      }
+
+      function renderAddressSuggestions(items) {
+        var list = document.getElementById("addressSuggestions");
+        if (!list) return;
+        list.innerHTML = "";
+        if (!items || !items.length) {
+          list.style.display = "none";
+          return;
+        }
+        items.forEach(function (item) {
+          var div = document.createElement("div");
+          div.className = "address-suggest-item";
+          div.textContent = item.display_name || "";
+          div.addEventListener("click", function () {
+            var input = document.getElementById("inputAddress");
+            input.value = item.display_name || "";
+            list.style.display = "none";
+          });
+          list.appendChild(div);
+        });
+        list.style.display = "block";
+      }
+
+      var suggestDebounceTimer = null;
+      function handleAddressInput(e) {
+        var value = e.target.value.trim();
+        if (!value || value.length < 2) {
+          renderAddressSuggestions([]);
+          return;
+        }
+        if (suggestDebounceTimer) {
+          clearTimeout(suggestDebounceTimer);
+        }
+        suggestDebounceTimer = setTimeout(function () {
+          activeAddressSuggestLookup += 1;
+          var lookupId = activeAddressSuggestLookup;
+          fetch(buildNominatimSearchUrl(value), {
+            headers: {
+              Accept: "application/json",
+              "Accept-Language": "en"
+            }
+          })
+            .then(function (res) {
+              if (!res.ok) throw new Error("Search failed");
+              return res.json();
+            })
+            .then(function (data) {
+              if (lookupId !== activeAddressSuggestLookup) return;
+              renderAddressSuggestions(Array.isArray(data) ? data : []);
+            })
+            .catch(function () {
+              if (lookupId !== activeAddressSuggestLookup) return;
+              renderAddressSuggestions([]);
+            });
+        }, 350);
+      }
+
+      function initSession() {
+        var raw = localStorage.getItem("pat_session");
+        if (raw) {
+          session = JSON.parse(raw);
+          document.getElementById("navLoginBtn").style.display = "none";
+          document.getElementById("navUserWrap").style.display = "flex";
+          document.getElementById("navUserName").innerHTML =
+            "Welcome <strong>" + session.name + "</strong>";
+          if (session.avatar) {
+            var img = document.getElementById("navAvatarImg");
+            img.src = session.avatar;
+            img.style.display = "block";
+          } else {
+            document.getElementById("navAvatarPlaceholder").style.display =
+              "flex";
+          }
+          document.getElementById("aboutSection").style.display = "none";
+          document.getElementById("historyHint").style.display = "none";
+          document.getElementById("inputName").value = session.name;
+          loadResidentReports();
+        }
+      }
+
+      function doLogout() {
+        localStorage.removeItem("pat_session");
+        window.location.reload();
+      }
+
+      function initMap() {
+        var map = L.map("leafletMap", {
+          zoomControl: true,
+        }).setView([14.5547, 121.0244], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map);
+
+        var pinIcon = L.divIcon({
+          className: "",
+          html: '<div style="width:18px;height:18px;background:#e53e3e;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 18],
         });
 
-        function handlePhotoUpload(e) {
-            var incoming = Array.from(e.target.files || []);
-            if (incoming.length === 0) return;
+        map.on("click", function (e) {
+          pinnedLatLng = e.latlng;
+          if (mapMarker) {
+            map.removeLayer(mapMarker);
+          }
+          mapMarker = L.marker(e.latlng, {
+            icon: pinIcon,
+          }).addTo(map);
+          var coordEl = document.getElementById("mapCoords");
+          coordEl.textContent =
+            e.latlng.lat.toFixed(5) + " N, " + e.latlng.lng.toFixed(5) + " E";
+          coordEl.style.display = "block";
+          reverseGeocodePin(e.latlng.lat, e.latlng.lng);
+        });
 
-            var remaining = MAX_PHOTOS - selectedPhotos.length;
-            if (remaining <= 0) {
-                showToast('Maximum of ' + MAX_PHOTOS + ' photos allowed.', true);
-                e.target.value = '';
-                return;
-            }
+        mapInstance = map;
+        setTimeout(function () {
+          map.invalidateSize();
+        }, 300);
+      }
 
-            if (incoming.length > remaining) {
-                incoming = incoming.slice(0, remaining);
-                showToast('Only ' + remaining + ' more photo(s) allowed.', true);
-            }
+      function toggleWasteDropdown() {
+        document.getElementById("wasteDropHeader").classList.toggle("open");
+        document.getElementById("wasteOptions").classList.toggle("open");
+      }
 
-            selectedPhotos = selectedPhotos.concat(incoming);
+      function selectWaste(type) {
+        selectedWaste = type;
+        var header = document.getElementById("wasteDropHeader");
+        document.getElementById("wasteSelected").textContent = type;
+        document.getElementById("wasteSelected").style.fontFamily =
+          "'DM Sans', sans-serif";
+        document.getElementById("wasteSelected").style.letterSpacing = "normal";
+        header.classList.add("selected");
+        header.classList.remove("open");
+        document.getElementById("wasteOptions").classList.remove("open");
+        document.querySelectorAll(".waste-option").forEach(function (opt) {
+          opt.classList.toggle(
+            "selected",
+            opt.textContent.trim().startsWith(type)
+          );
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        var wrap = document.querySelector(".desc-waste-wrap");
+        var suggest = document.getElementById("addressSuggestions");
+        if (wrap && !wrap.contains(e.target)) {
+          document.getElementById("wasteDropHeader").classList.remove("open");
+          document.getElementById("wasteOptions").classList.remove("open");
+        }
+        if (suggest && !suggest.contains(e.target) && e.target.id !== "inputAddress") {
+          suggest.style.display = "none";
+        }
+      });
+
+      function handlePhotoUpload(e) {
+        var incoming = Array.from(e.target.files || []);
+        if (incoming.length === 0) return;
+
+        var remaining = MAX_PHOTOS - selectedPhotos.length;
+        if (remaining <= 0) {
+          showToast("Maximum of " + MAX_PHOTOS + " photos allowed.", true);
+          e.target.value = "";
+          return;
+        }
+
+        if (incoming.length > remaining) {
+          incoming = incoming.slice(0, remaining);
+          showToast("Only " + remaining + " more photo(s) allowed.", true);
+        }
+
+        selectedPhotos = selectedPhotos.concat(incoming);
+        syncPhotoInput();
+        renderPhotoPreviews();
+      }
+
+      function renderPhotoPreviews() {
+        var previewWrap = document.getElementById("photoPreviews");
+        previewWrap.innerHTML = "";
+
+        if (selectedPhotos.length === 0) {
+          document.querySelector("#photoDrop .upload-icon").style.display = "";
+          document.querySelector("#photoDrop .upload-text").style.display = "";
+          return;
+        }
+
+        document.querySelector("#photoDrop .upload-icon").style.display =
+          "none";
+        document.querySelector("#photoDrop .upload-text").style.display =
+          "none";
+
+        selectedPhotos.forEach(function (file, idx) {
+          var item = document.createElement("div");
+          item.className = "photo-preview-item";
+          var img = document.createElement("img");
+          img.alt = "Preview " + (idx + 1);
+          var remove = document.createElement("button");
+          remove.className = "photo-preview-remove";
+          remove.type = "button";
+          remove.textContent = "×";
+          remove.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            selectedPhotos.splice(idx, 1);
             syncPhotoInput();
             renderPhotoPreviews();
-        }
+          });
 
-        function renderPhotoPreviews() {
-            var previewWrap = document.getElementById('photoPreviews');
-            previewWrap.innerHTML = '';
+          item.appendChild(img);
+          item.appendChild(remove);
+          previewWrap.appendChild(item);
 
-            if (selectedPhotos.length === 0) {
-                document.querySelector('#photoDrop .upload-icon').style.display = '';
-                document.querySelector('#photoDrop .upload-text').style.display = '';
-                return;
-            }
-
-            document.querySelector('#photoDrop .upload-icon').style.display = 'none';
-            document.querySelector('#photoDrop .upload-text').style.display = 'none';
-
-            selectedPhotos.forEach(function(file, idx) {
-                var item = document.createElement('div');
-                item.className = 'photo-preview-item';
-                var img = document.createElement('img');
-                img.alt = 'Preview ' + (idx + 1);
-                var remove = document.createElement('button');
-                remove.className = 'photo-preview-remove';
-                remove.type = 'button';
-                remove.textContent = '×';
-                remove.addEventListener('click', function(ev) {
-                    ev.stopPropagation();
-                    selectedPhotos.splice(idx, 1);
-                    syncPhotoInput();
-                    renderPhotoPreviews();
-                });
-
-                item.appendChild(img);
-                item.appendChild(remove);
-                previewWrap.appendChild(item);
-
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function syncPhotoInput() {
-            var dt = new DataTransfer();
-            selectedPhotos.forEach(function(file) {
-                dt.items.add(file);
-            });
-            document.getElementById('photoInput').files = dt.files;
-        }
-
-        function clearForm() {
-            document.getElementById('inputName').value = session ? session.name : '';
-            document.getElementById('inputAddress').value = '';
-            document.getElementById('inputDesc').value = '';
-            selectedWaste = '';
-            activeAddressLookup += 1;
-            var header = document.getElementById('wasteDropHeader');
-            var sel = document.getElementById('wasteSelected');
-            sel.innerHTML = 'T y p e &nbsp; o f &nbsp; W a s t e';
-            sel.style.fontFamily = "'DM Mono', monospace";
-            sel.style.letterSpacing = '.5px';
-            header.classList.remove('selected');
-            document.querySelectorAll('.waste-option').forEach(function(o) {
-                o.classList.remove('selected');
-            });
-            selectedPhotos = [];
-            document.getElementById('photoInput').value = '';
-            renderPhotoPreviews();
-            if (mapMarker && mapInstance) {
-                mapInstance.removeLayer(mapMarker);
-                mapMarker = null;
-            }
-            pinnedLatLng = null;
-            document.getElementById('mapCoords').style.display = 'none';
-            showToast('Form cleared.');
-        }
-
-        function submitReport() {
-            var name = document.getElementById('inputName').value.trim();
-            var addr = document.getElementById('inputAddress').value.trim();
-            var desc = document.getElementById('inputDesc').value.trim();
-            var photos = document.getElementById('photoInput').files;
-            var isGuest = !session;
-            if (!name) {
-                showToast('Please enter your name.', true);
-                return;
-            }
-            if (!addr) {
-                showToast('Please enter the address.', true);
-                return;
-            }
-            if (!desc) {
-                showToast('Please describe the waste issue.', true);
-                return;
-            }
-            if (!selectedWaste) {
-                showToast('Please select the type of waste.', true);
-                return;
-            }
-            if (!pinnedLatLng) {
-                showToast('Please click the map to pin a location.', true);
-                return;
-            }
-            if (!photos || photos.length === 0) {
-                showToast('Please upload at least one photo as evidence.', true);
-                return;
-            }
-            if (photos.length > MAX_PHOTOS) {
-                showToast('Please limit to ' + MAX_PHOTOS + ' photos.', true);
-                return;
-            }
-
-            var categoryId = WASTE_CATEGORY_MAP[selectedWaste] || null;
-            if (!categoryId) {
-                showToast('Invalid waste category selected.', true);
-                return;
-            }
-
-            var form = new FormData();
-            form.append('category_id', categoryId);
-            form.append('description', desc);
-            if (photos[0]) {
-                form.append('report_image', photos[0]);
-                form.append('imageUrl', photos[0].name);
-            }
-            form.append('latitude', pinnedLatLng.lat.toFixed(8));
-            form.append('longitude', pinnedLatLng.lng.toFixed(8));
-            form.append('locationName', addr);
-            form.append('resident_name', (session && session.name) ? session.name : name);
-            form.append('resident_username', (session && session.username) ? session.username : 'guest');
-            form.append('resident_email', (session && session.email) ? session.email : '');
-
-            fetch('submit_report.php', {
-                method: 'POST',
-                body: form
-            }).then(function(res) {
-                return res.json();
-            }).then(function(data) {
-                if (!data || data.status !== 'success') {
-                    showToast((data && data.message) ? data.message : 'Failed to submit report.', true);
-                    return;
-                }
-
-                if (session) {
-                    loadResidentReports();
-                }
-
-                if (isGuest) {
-                    showToast('Report ' + formatReportId(data.report_ID) + ' submitted. Guest reports cannot be tracked later.');
-                } else {
-                    showToast('Report ' + formatReportId(data.report_ID) + ' submitted. We will review it shortly.');
-                }
-                setTimeout(clearForm, 2500);
-            }).catch(function() {
-                showToast('Failed to submit report. Please try again.', true);
-            });
-        }
-
-        function openHelpModal() {
-            document.getElementById('helpModal').classList.add('open');
-        }
-
-        function openTrackModal() {
-            if (!session || !session.email) {
-                showToast('Login with a resident account to track a report.', true);
-                return;
-            }
-            document.getElementById('trackModal').classList.add('open');
-            document.getElementById('trackResult').classList.remove('show');
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('open');
-        }
-
-        document.querySelectorAll('.modal-overlay').forEach(function(m) {
-            m.addEventListener('click', function(e) {
-                if (e.target === m) m.classList.remove('open');
-            });
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
         });
+      }
 
-        function openHistoryModal() {
-            if (!session) {
-                showToast('Please login to view your report history.', true);
-                return;
-            }
+      function syncPhotoInput() {
+        var dt = new DataTransfer();
+        selectedPhotos.forEach(function (file) {
+          dt.items.add(file);
+        });
+        document.getElementById("photoInput").files = dt.files;
+      }
 
-            var list = document.getElementById('historyList');
-            list.innerHTML = '<div class="empty-history">Loading reports...</div>';
-            document.getElementById('historyModal').classList.add('open');
+      function clearForm() {
+        document.getElementById("inputName").value = session
+          ? session.name
+          : "";
+        document.getElementById("inputAddress").value = "";
+        document.getElementById("inputDesc").value = "";
+        selectedWaste = "";
+        activeAddressLookup += 1;
+        var header = document.getElementById("wasteDropHeader");
+        var sel = document.getElementById("wasteSelected");
+        sel.innerHTML = "T y p e &nbsp; o f &nbsp; W a s t e";
+        sel.style.fontFamily = "'DM Mono', monospace";
+        sel.style.letterSpacing = ".5px";
+        header.classList.remove("selected");
+        document.querySelectorAll(".waste-option").forEach(function (o) {
+          o.classList.remove("selected");
+        });
+        selectedPhotos = [];
+        document.getElementById("photoInput").value = "";
+        renderPhotoPreviews();
+        if (mapMarker && mapInstance) {
+          mapInstance.removeLayer(mapMarker);
+          mapMarker = null;
+        }
+        pinnedLatLng = null;
+        document.getElementById("mapCoords").style.display = "none";
+        showToast("Form cleared.");
+      }
 
-            loadResidentReports().then(function(myReports) {
-                if (!myReports.length) {
-                    list.innerHTML = '<div class="empty-history">No reports submitted yet.</div>';
-                    return;
-                }
-
-                list.innerHTML = myReports.slice().reverse().map(function(r) {
-                    var trimmedDesc = r.desc.length > 60 ? r.desc.substring(0, 60) + '...' : r.desc;
-                    return '<div class="history-item">' +
-                        '<div class="h-id">' + escapeHtml(r.id) + ' &bull; ' + escapeHtml(r.date) + '</div>' +
-                        '<div class="h-desc">' + escapeHtml(trimmedDesc) + '</div>' +
-                        '<span class="h-badge ' + escapeHtml(r.status) + '">' + escapeHtml(getStatusLabel(r.status)) + '</span>' +
-                        '</div>';
-                }).join('');
-            }).catch(function() {
-                list.innerHTML = '<div class="empty-history">Unable to load reports right now.</div>';
-            });
+      function submitReport() {
+        var name = document.getElementById("inputName").value.trim();
+        var addr = document.getElementById("inputAddress").value.trim();
+        var desc = document.getElementById("inputDesc").value.trim();
+        var photos = document.getElementById("photoInput").files;
+        var isGuest = !session;
+        if (!name) {
+          showToast("Please enter your name.", true);
+          return;
+        }
+        if (!addr) {
+          showToast("Please enter the address.", true);
+          return;
+        }
+        if (!desc) {
+          showToast("Please describe the waste issue.", true);
+          return;
+        }
+        if (!selectedWaste) {
+          showToast("Please select the type of waste.", true);
+          return;
+        }
+        if (!pinnedLatLng) {
+          showToast("Please click the map to pin a location.", true);
+          return;
+        }
+        if (photos && photos.length > MAX_PHOTOS) {
+          showToast("Please limit to " + MAX_PHOTOS + " photos.", true);
+          return;
         }
 
-        function doTrack() {
-            if (!session || !session.email) {
-                showToast('Login with a resident account to track a report.', true);
-                return;
-            }
-
-            var val = document.getElementById('trackInput').value.trim().toUpperCase();
-            if (!val) {
-                showToast('Please enter a report ID.', true);
-                return;
-            }
-
-            document.getElementById('trackResultId').textContent = val;
-            document.getElementById('trackResultStatus').textContent = 'Checking...';
-            document.getElementById('trackResultStatus').className = 'track-status pending';
-            document.getElementById('trackResultMsg').textContent = 'Looking up the latest report status.';
-            document.getElementById('trackResult').classList.add('show');
-
-            fetch('get_report.php?report_reference=' + encodeURIComponent(val) + '&resident_email=' + encodeURIComponent(session.email), {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }).then(function(res) {
-                return res.json();
-            }).then(function(data) {
-                var found = data && data.status === 'success' && data.data && data.data.length ? mapReportFromApi(data.data[0]) : null;
-                if (!found) {
-                    throw new Error('Report not found.');
-                }
-
-                document.getElementById('trackResultId').textContent = found.id;
-                document.getElementById('trackResultStatus').textContent = getStatusLabel(found.status);
-                document.getElementById('trackResultStatus').className = 'track-status ' + found.status;
-                document.getElementById('trackResultMsg').textContent = getStatusMessage(found.status);
-            }).catch(function() {
-                document.getElementById('trackResultStatus').textContent = 'Not Found';
-                document.getElementById('trackResultStatus').className = 'track-status rejected';
-                document.getElementById('trackResultMsg').textContent = 'No report matched that ID.';
-            });
+        var categoryId = WASTE_CATEGORY_MAP[selectedWaste] || null;
+        if (!categoryId) {
+          showToast("Invalid waste category selected.", true);
+          return;
         }
 
-        function showToast(msg, isError) {
-            var t = document.getElementById('toast');
-            t.textContent = msg;
-            t.className = 'toast' + (isError ? ' error' : '');
-            t.classList.add('show');
-            setTimeout(function() {
-                t.classList.remove('show');
-            }, 3400);
+        var form = new FormData();
+        form.append("category_id", categoryId);
+        form.append("description", desc);
+        if (photos && photos[0]) {
+          form.append("report_image", photos[0]);
+          form.append("imageUrl", photos[0].name);
+        }
+        form.append("latitude", pinnedLatLng.lat.toFixed(8));
+        form.append("longitude", pinnedLatLng.lng.toFixed(8));
+        form.append("locationName", addr);
+        form.append(
+          "resident_name",
+          session && session.name ? session.name : name
+        );
+        form.append(
+          "resident_username",
+          session && session.username ? session.username : "guest"
+        );
+        form.append(
+          "resident_email",
+          session && session.email ? session.email : ""
+        );
+
+        fetch("submit_report.php", {
+          method: "POST",
+          body: form,
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            if (!data || data.status !== "success") {
+              showToast(
+                data && data.message
+                  ? data.message
+                  : "Failed to submit report.",
+                true
+              );
+              return;
+            }
+
+            if (session) {
+              loadResidentReports();
+            }
+
+            if (isGuest) {
+              showToast(
+                "Report " +
+                  formatReportId(data.report_ID) +
+                  " submitted. Guest reports cannot be tracked later."
+              );
+            } else {
+              showToast(
+                "Report " +
+                  formatReportId(data.report_ID) +
+                  " submitted. We will review it shortly."
+              );
+            }
+            setTimeout(clearForm, 2500);
+          })
+          .catch(function () {
+            showToast("Failed to submit report. Please try again.", true);
+          });
+      }
+
+      function openHelpModal() {
+        document.getElementById("helpModal").classList.add("open");
+      }
+
+      function openTrackModal() {
+        if (!session || !session.email) {
+          showToast("Login with a resident account to track a report.", true);
+          return;
+        }
+        document.getElementById("trackModal").classList.add("open");
+        document.getElementById("trackResult").classList.remove("show");
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.remove("open");
+      }
+
+      document.querySelectorAll(".modal-overlay").forEach(function (m) {
+        m.addEventListener("click", function (e) {
+          if (e.target === m) m.classList.remove("open");
+        });
+      });
+
+      function openHistoryModal() {
+        if (!session) {
+          showToast("Please login to view your report history.", true);
+          return;
         }
 
-        initSession();
-        initMap();
+        var list = document.getElementById("historyList");
+        list.innerHTML = '<div class="empty-history">Loading reports...</div>';
+        document.getElementById("historyModal").classList.add("open");
+
+        loadResidentReports()
+          .then(function (myReports) {
+            if (!myReports.length) {
+              list.innerHTML =
+                '<div class="empty-history">No reports submitted yet.</div>';
+              return;
+            }
+
+            list.innerHTML = myReports
+              .slice()
+              .reverse()
+              .map(function (r) {
+                var trimmedDesc =
+                  r.desc.length > 60 ? r.desc.substring(0, 60) + "..." : r.desc;
+                return (
+                  '<div class="history-item">' +
+                  '<div class="h-id">' +
+                  escapeHtml(r.id) +
+                  " &bull; " +
+                  escapeHtml(r.date) +
+                  "</div>" +
+                  '<div class="h-desc">' +
+                  escapeHtml(trimmedDesc) +
+                  "</div>" +
+                  '<span class="h-badge ' +
+                  escapeHtml(r.status) +
+                  '">' +
+                  escapeHtml(getStatusLabel(r.status)) +
+                  "</span>" +
+                  "</div>"
+                );
+              })
+              .join("");
+          })
+          .catch(function () {
+            list.innerHTML =
+              '<div class="empty-history">Unable to load reports right now.</div>';
+          });
+      }
+
+      function doTrack() {
+        if (!session || !session.email) {
+          showToast("Login with a resident account to track a report.", true);
+          return;
+        }
+
+        var val = document
+          .getElementById("trackInput")
+          .value.trim()
+          .toUpperCase();
+        if (!val) {
+          showToast("Please enter a report ID.", true);
+          return;
+        }
+
+        document.getElementById("trackResultId").textContent = val;
+        document.getElementById("trackResultStatus").textContent =
+          "Checking...";
+        document.getElementById("trackResultStatus").className =
+          "track-status pending";
+        document.getElementById("trackResultMsg").textContent =
+          "Looking up the latest report status.";
+        document.getElementById("trackResult").classList.add("show");
+
+        fetch(
+          "get_report.php?report_reference=" +
+            encodeURIComponent(val) +
+            "&resident_email=" +
+            encodeURIComponent(session.email),
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        )
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (data) {
+            var found =
+              data && data.status === "success" && data.data && data.data.length
+                ? mapReportFromApi(data.data[0])
+                : null;
+            if (!found) {
+              throw new Error("Report not found.");
+            }
+
+            document.getElementById("trackResultId").textContent = found.id;
+            document.getElementById("trackResultStatus").textContent =
+              getStatusLabel(found.status);
+            document.getElementById("trackResultStatus").className =
+              "track-status " + found.status;
+            document.getElementById("trackResultMsg").textContent =
+              getStatusMessage(found.status);
+          })
+          .catch(function () {
+            document.getElementById("trackResultStatus").textContent =
+              "Not Found";
+            document.getElementById("trackResultStatus").className =
+              "track-status rejected";
+            document.getElementById("trackResultMsg").textContent =
+              "No report matched that ID.";
+          });
+      }
+
+      function showToast(msg, isError) {
+        var t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "toast" + (isError ? " error" : "");
+        t.classList.add("show");
+        setTimeout(function () {
+          t.classList.remove("show");
+        }, 3400);
+      }
+
+      initSession();
+      initMap();
+      var addrInput = document.getElementById("inputAddress");
+      if (addrInput) {
+        addrInput.addEventListener("input", handleAddressInput);
+      }
     </script>
-</body>
-
+  </body>
+</html>

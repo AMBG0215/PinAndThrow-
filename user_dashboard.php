@@ -9,10 +9,10 @@ if (!isset($_SESSION['user_id']) || (isset($_SESSION['role']) && !in_array(strto
 }
 
 $host   = 'localhost';
-$port   = 3306;
+$port   = 3307;
 $dbname = 'pin_and_throw';
 $dbuser = 'root';
-$dbpass = 'Mika0215!!!';
+$dbpass = '1234567890';
 
 try {
   $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);

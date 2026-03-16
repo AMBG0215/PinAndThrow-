@@ -29,10 +29,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 $host   = 'localhost';
-$port   = 3306;
+$port   = 3307;
 $dbname = 'pin_and_throw';
 $dbuser = 'root';
-$dbpass = 'Mika0215!!!';
+$dbpass = '1234567890';
 
 try {
   $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
@@ -45,6 +45,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     header('Content-Type: application/json');
   $report_id = intval($_POST['report_id']);
   $new_status = strtolower(trim($_POST['status'] ?? ''));
+  $reject_note = trim($_POST['reject_note'] ?? '');
 
     $allowed = ['pending', 'verified', 'inprogress', 'resolved', 'rejected'];
     if (!in_array($new_status, $allowed)) {
@@ -79,6 +80,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
         'pending'    => 'Your report status has been reset to pending.',
     ];
     $message = $msgMap[$new_status] ?? 'Your report status has been updated.';
+
+    if ($new_status === 'rejected' && $reject_note !== '') {
+        $message .= ' Reason: ' . $reject_note;
+    }
 
     // Get the resident_ID from the report
     $res = $pdo->prepare("SELECT resident_ID FROM Reports WHERE report_ID = ?");
@@ -737,13 +742,18 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
 
               <?php if (!empty($reports)): ?>
                 <div class="field-label">Update Status</div>
-                <select class="status-select" id="statusSelect">
+                <select class="status-select" id="statusSelect" onchange="onStatusChange()">
                   <option value="pending">Pending</option>
                   <option value="verified">Verified</option>
                   <option value="inprogress">In-Progress</option>
                   <option value="resolved">Resolved</option>
                   <option value="rejected">Rejected</option>
                 </select>
+
+                <div id="rejectNoteWrap" style="display:none;margin:8px 0 4px;">
+                  <label class="field-label" for="rejectNote" style="margin-bottom:4px;">Rejection Note (optional)</label>
+                  <textarea id="rejectNote" rows="2" style="width:100%;resize:vertical;background:#f0f7f2;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'DM Sans',sans-serif;"></textarea>
+                </div>
 
                 <button class="btn-primary" id="saveStatusBtn" onclick="saveAction()"><?= !empty($reports[0]['resident_ID']) ? ' Save &amp; Notify Resident' : ' Save Status' ?></button>
                 <button class="btn-danger"  onclick="rejectReport()">✕ Reject Report</button>
@@ -1046,6 +1056,14 @@ function saveAction() {
   form.append('report_id', reportId);
   form.append('status',    status);
 
+  if (status === 'rejected') {
+    const noteEl = document.getElementById('rejectNote');
+    const note = noteEl ? noteEl.value.trim() : '';
+    if (note) {
+      form.append('reject_note', note);
+    }
+  }
+
   fetch('admin_dashboard.php', { method: 'POST', body: form })
     .then(r => r.text().then(text => {
       try { return JSON.parse(text); }
@@ -1072,7 +1090,16 @@ function saveAction() {
 
 function rejectReport() {
   document.getElementById('statusSelect').value = 'rejected';
+  onStatusChange();
   saveAction();
+}
+
+function onStatusChange() {
+  const select = document.getElementById('statusSelect');
+  const wrap = document.getElementById('rejectNoteWrap');
+  if (!select || !wrap) return;
+  const val = String(select.value || '').toLowerCase();
+  wrap.style.display = val === 'rejected' ? 'block' : 'none';
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
