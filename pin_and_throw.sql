@@ -68,7 +68,7 @@ CREATE TABLE `reports` (
   `category_id` int(11) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `imageUrl` varchar(255) DEFAULT NULL,
-  `status` enum('Pending','Verified','Resolved','Rejected') DEFAULT 'Pending',
+  `status` enum('Pending','Verified','InProgress','Resolved','Rejected') DEFAULT 'Pending',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -85,6 +85,21 @@ CREATE TABLE `users` (
   `email` varchar(150) DEFAULT NULL,
   `role` enum('Resident','Officer') DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `notification_ID` int(11) NOT NULL,
+  `report_ID` int(11) NOT NULL,
+  `user_ID` int(11) NOT NULL,
+  `message` varchar(255) NOT NULL,
+  `isRead` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -110,6 +125,14 @@ ALTER TABLE `locations`
 ALTER TABLE `reports`
   ADD PRIMARY KEY (`report_ID`),
   ADD KEY `category_id` (`category_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`notification_ID`),
+  ADD KEY `idx_notifications_report_id` (`report_ID`),
+  ADD KEY `idx_notifications_user_id` (`user_ID`);
 
 --
 -- Indexes for table `users`
@@ -141,6 +164,12 @@ ALTER TABLE `reports`
   MODIFY `report_ID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `notification_ID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
@@ -161,6 +190,13 @@ ALTER TABLE `locations`
 --
 ALTER TABLE `reports`
   ADD CONSTRAINT `reports_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`);
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`report_ID`) REFERENCES `reports` (`report_ID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`user_ID`) REFERENCES `users` (`user_ID`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -208,6 +208,12 @@
         var reports = JSON.parse(localStorage.getItem('pat_reports') || '[]');
         var selectedPhotos = [];
         var MAX_PHOTOS = 5;
+        var WASTE_CATEGORY_MAP = {
+            'Hazardous': 1,
+            'Pharmaceutical': 2,
+            'Electrical': 3,
+            'Non-Segregated': 4
+        };
 
         function initSession() {
             var raw = localStorage.getItem('pat_session');
@@ -430,28 +436,59 @@
                 return;
             }
 
-            var reportId = 'RPT-' + String(Math.floor(Math.random() * 9000) + 1000);
-            var report = {
-                id: reportId,
-                name: name,
-                address: addr,
-                desc: desc,
-                waste: selectedWaste,
-                lat: pinnedLatLng.lat.toFixed(5),
-                lng: pinnedLatLng.lng.toFixed(5),
-                status: 'pending',
-                date: new Date().toLocaleDateString('en-PH', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                }),
-                user: session.username
-            };
+            var categoryId = WASTE_CATEGORY_MAP[selectedWaste] || null;
+            if (!categoryId) {
+                showToast('Invalid waste category selected.', true);
+                return;
+            }
 
-            reports.push(report);
-            localStorage.setItem('pat_reports', JSON.stringify(reports));
-            showToast('Report ' + reportId + ' submitted. We will review it shortly.');
-            setTimeout(clearForm, 2500);
+            var form = new FormData();
+            form.append('category_id', categoryId);
+            form.append('description', desc);
+            form.append('imageUrl', photos[0] ? photos[0].name : '');
+            form.append('latitude', pinnedLatLng.lat.toFixed(8));
+            form.append('longitude', pinnedLatLng.lng.toFixed(8));
+            form.append('locationName', addr);
+            form.append('resident_name', session.name || name);
+            form.append('resident_username', session.username || 'resident');
+            form.append('resident_email', session.email || '');
+
+            fetch('submit_report.php', {
+                method: 'POST',
+                body: form
+            }).then(function(res) {
+                return res.json();
+            }).then(function(data) {
+                if (!data || data.status !== 'success') {
+                    showToast((data && data.message) ? data.message : 'Failed to submit report.', true);
+                    return;
+                }
+
+                var reportId = 'RPT-' + String(data.report_ID).padStart(4, '0');
+                var report = {
+                    id: reportId,
+                    name: name,
+                    address: addr,
+                    desc: desc,
+                    waste: selectedWaste,
+                    lat: pinnedLatLng.lat.toFixed(5),
+                    lng: pinnedLatLng.lng.toFixed(5),
+                    status: 'pending',
+                    date: new Date().toLocaleDateString('en-PH', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    }),
+                    user: session.username
+                };
+
+                reports.push(report);
+                localStorage.setItem('pat_reports', JSON.stringify(reports));
+                showToast('Report ' + reportId + ' submitted. We will review it shortly.');
+                setTimeout(clearForm, 2500);
+            }).catch(function() {
+                showToast('Failed to submit report. Please try again.', true);
+            });
         }
 
         function openHelpModal() {

@@ -215,6 +215,12 @@ nav {
 </div>
 
 <script>
+var ADMIN_LOGIN = {
+  username: 'admin',
+  email: 'admin@pinandthrow.com',
+  password: 'admin123'
+};
+
 var DEMO_USERS = [
   { username: 'resident',  email: 'resident@pinandthrow.com', password: 'password123', name: 'Juan dela Cruz',        avatar: 'https://i.pravatar.cc/80?img=11' },
   { username: 'feone',     email: 'feone@pinandthrow.com',    password: 'feone123',    name: 'Feone Marie Remoquillo', avatar: 'https://i.pravatar.cc/80?img=47' },
@@ -242,6 +248,29 @@ function doLogin() {
     return;
   }
 
+  // Route admin login through PHP so session role is set server-side.
+  if ((user === ADMIN_LOGIN.username || user === ADMIN_LOGIN.email) && pass === ADMIN_LOGIN.password) {
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'admin_dashboard.php';
+
+    var emailInput = document.createElement('input');
+    emailInput.type = 'hidden';
+    emailInput.name = 'login_email';
+    emailInput.value = ADMIN_LOGIN.email;
+    form.appendChild(emailInput);
+
+    var passInput = document.createElement('input');
+    passInput.type = 'hidden';
+    passInput.name = 'login_password';
+    passInput.value = pass;
+    form.appendChild(passInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    return;
+  }
+
   var allUsers = getAllUsers();
   var found = null;
   for (var i = 0; i < allUsers.length; i++) {
@@ -254,7 +283,7 @@ function doLogin() {
     return;
   }
 
-  localStorage.setItem('pat_session', JSON.stringify({ name: found.name, username: found.username, avatar: found.avatar || null }));
+  localStorage.setItem('pat_session', JSON.stringify({ name: found.name, username: found.username, email: found.email || null, avatar: found.avatar || null }));
   window.location.href = 'index.html';
 }
 

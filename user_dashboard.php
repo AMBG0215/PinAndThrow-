@@ -9,13 +9,13 @@ if (!isset($_SESSION['user_id']) || (isset($_SESSION['role']) && !in_array(strto
 }
 
 $host   = 'localhost';
+$port   = 3306;
 $dbname = 'pin_and_throw';
-$dbname = 'pinandthrow_db';
 $dbuser = 'root';
-$dbpass = '';
+$dbpass = 'Mika0215!!!';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
+  $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
@@ -40,9 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // ── Counts for THIS resident's reports only ──────────────────────────────
 $counts = $pdo->prepare("
     SELECT
-        SUM(status = 'pending')    AS pending,
-        SUM(status = 'inprogress') AS inprogress,
-        SUM(status = 'resolved')   AS resolved,
+         SUM(LOWER(status) = 'pending')    AS pending,
+         SUM(LOWER(status) = 'inprogress') AS inprogress,
+         SUM(LOWER(status) = 'resolved')   AS resolved,
         COUNT(*)                   AS total
     FROM Reports
     WHERE resident_ID = ?
@@ -73,7 +73,7 @@ if ($active_tab === 'all') {
                l.locationName, l.latitude, l.longitude
         FROM Reports r
         LEFT JOIN Locations l ON l.report_ID = r.report_ID
-        WHERE r.resident_ID = ? AND r.status = ?
+         WHERE r.resident_ID = ? AND LOWER(r.status) = ?
         ORDER BY r.timestamp DESC
         LIMIT 50
     ");
@@ -83,7 +83,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ── Tab counts for this resident's reports ───────────────────────────────
 $tab_counts_stmt = $pdo->prepare("
-    SELECT status, COUNT(*) AS cnt FROM Reports WHERE resident_ID = ? GROUP BY status
+  SELECT LOWER(status) AS status, COUNT(*) AS cnt FROM Reports WHERE resident_ID = ? GROUP BY LOWER(status)
 ");
 $tab_counts_stmt->execute([$resident_id]);
 $tab_counts = $tab_counts_stmt->fetchAll(PDO::FETCH_KEY_PAIR);

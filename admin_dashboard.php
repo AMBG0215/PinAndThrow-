@@ -29,22 +29,22 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 $host   = 'localhost';
-$dbname = 'pinandthrow_db';
+$port   = 3306;
+$dbname = 'pin_and_throw';
 $dbuser = 'root';
-$dbpass = '';
+$dbpass = 'Mika0215!!!';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
+  $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     header('Content-Type: application/json');
-    $report_id = intval($_POST['report_id']);
-    $new_status = $_POST['status'];
-    $officer_id = $_SESSION['user_id'];
+  $report_id = intval($_POST['report_id']);
+  $new_status = strtolower(trim($_POST['status'] ?? ''));
 
     $allowed = ['pending', 'verified', 'inprogress', 'resolved', 'rejected'];
     if (!in_array($new_status, $allowed)) {
@@ -52,9 +52,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit();
     }
 
-    // Update report status and assign officer
-    $stmt = $pdo->prepare("UPDATE Reports SET status = ?, officer_ID = ? WHERE report_ID = ?");
-    $stmt->execute([$new_status, $officer_id, $report_id]);
+  // Map UI statuses to the DB enum values.
+  $db_status_map = [
+    'pending' => 'Pending',
+    'verified' => 'Verified',
+    'inprogress' => 'InProgress',
+    'resolved' => 'Resolved',
+    'rejected' => 'Rejected',
+  ];
+  $db_status = $db_status_map[$new_status] ?? 'Pending';
+
+  try {
+    $stmt = $pdo->prepare("UPDATE Reports SET status = ? WHERE report_ID = ?");
+    $stmt->execute([$db_status, $report_id]);
+  } catch (PDOException $e) {
+    echo json_encode(['success' => false, 'message' => 'Failed to update status: ' . $e->getMessage()]);
+    exit();
+  }
 
     // Insert a notification for the resident
     $msgMap = [
@@ -72,8 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $report = $res->fetch(PDO::FETCH_ASSOC);
 
     if ($report) {
+      try {
         $notif = $pdo->prepare("INSERT INTO Notifications (report_ID, user_ID, message, isRead) VALUES (?, ?, ?, 0)");
         $notif->execute([$report_id, $report['resident_ID'], $message]);
+      } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Status saved, but notification failed: ' . $e->getMessage()]);
+        exit();
+      }
     }
 
     echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
@@ -83,9 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 $counts = $pdo->query("
     SELECT
-        SUM(status = 'pending')    AS pending,
-        SUM(status = 'inprogress') AS inprogress,
-        SUM(status = 'resolved')   AS resolved,
+  SUM(LOWER(status) = 'pending')    AS pending,
+  SUM(LOWER(status) = 'inprogress') AS inprogress,
+  SUM(LOWER(status) = 'resolved')   AS resolved,
         COUNT(*)                   AS total
     FROM Reports
 ")->fetch(PDO::FETCH_ASSOC);
@@ -102,7 +121,7 @@ $stmt = $pdo->prepare("
     FROM Reports r
     JOIN Users u ON u.user_ID = r.resident_ID
     LEFT JOIN Locations l ON l.report_ID = r.report_ID
-    WHERE r.status = ?
+  WHERE LOWER(r.status) = ?
     ORDER BY r.timestamp DESC
     LIMIT 20
 ");
@@ -111,7 +130,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 $tab_counts = $pdo->query("
-    SELECT status, COUNT(*) AS cnt FROM Reports GROUP BY status
+  SELECT LOWER(status) AS status, COUNT(*) AS cnt FROM Reports GROUP BY LOWER(status)
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 
@@ -121,7 +140,7 @@ $alerts = $pdo->query("
            DATEDIFF(NOW(), r.timestamp) AS days_old
     FROM Reports r
     LEFT JOIN Locations l ON l.report_ID = r.report_ID
-    WHERE r.status IN ('pending','verified')
+   WHERE LOWER(r.status) IN ('pending','verified')
       AND (DATEDIFF(NOW(), r.timestamp) >= 3 OR r.description LIKE '%hazard%')
     ORDER BY days_old DESC
     LIMIT 5
@@ -153,16 +172,22 @@ $by_location = $pdo->query("
 $max_loc = !empty($by_location) ? max(array_column($by_location, 'cnt')) : 1;
 
 
-$officer = $pdo->prepare("SELECT firstName, lastName FROM Users WHERE user_ID = ?");
-$officer->execute([$_SESSION['user_id']]);
-$officer = $officer->fetch(PDO::FETCH_ASSOC);
-$officer_initials = strtoupper(substr($officer['firstName'],0,1) . substr($officer['lastName'],0,1));
-$officer_initials = 'AO';
-$officer_name     = 'Admin Officer';
+$officer_stmt = $pdo->prepare("SELECT firstName, lastName FROM Users WHERE user_ID = ?");
+$officer_stmt->execute([$_SESSION['user_id']]);
+$officer = $officer_stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($officer && isset($officer['firstName'], $officer['lastName'])) {
+  $officer_initials = strtoupper(substr($officer['firstName'], 0, 1) . substr($officer['lastName'], 0, 1));
+  $officer_name = trim($officer['firstName'] . ' ' . $officer['lastName']);
+} else {
+  $officer_initials = 'AO';
+  $officer_name = 'Admin Officer';
+}
 
 
 function statusClass($s) {
-    return match($s) {
+  $s = strtolower((string)$s);
+  return match($s) {
         'verified'   => 'verified',
         'resolved'   => 'resolved',
         'rejected'   => 'rejected',
@@ -173,18 +198,118 @@ function statusClass($s) {
 
 // Helper: status display label
 function statusLabel($s) {
-    return match($s) {
+  $s = strtolower((string)$s);
+  return match($s) {
         'inprogress' => 'In-Progress',
         default      => ucfirst($s),
     };
 }
+
+function buildHeatmapData(PDO $pdo, int $rows = 7, int $cols = 7): array {
+  $stmt = $pdo->query("\n        SELECT latitude, longitude\n        FROM Locations\n        WHERE latitude IS NOT NULL\n          AND longitude IS NOT NULL\n    ");
+  $points = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  $totalCells = $rows * $cols;
+  if (empty($points)) {
+    return [
+      'success' => true,
+      'cells' => array_fill(0, $totalCells, 'l0'),
+      'points' => 0,
+      'updatedAt' => time(),
+    ];
+  }
+
+  $lats = array_map(fn($p) => (float)$p['latitude'], $points);
+  $lngs = array_map(fn($p) => (float)$p['longitude'], $points);
+
+  $minLat = min($lats);
+  $maxLat = max($lats);
+  $minLng = min($lngs);
+  $maxLng = max($lngs);
+
+  // Avoid zero-width bounds when points are tightly clustered.
+  if ($maxLat - $minLat < 0.000001) {
+    $minLat -= 0.0005;
+    $maxLat += 0.0005;
+  }
+  if ($maxLng - $minLng < 0.000001) {
+    $minLng -= 0.0005;
+    $maxLng += 0.0005;
+  }
+
+  $latPad = ($maxLat - $minLat) * 0.05;
+  $lngPad = ($maxLng - $minLng) * 0.05;
+  $minLat -= $latPad;
+  $maxLat += $latPad;
+  $minLng -= $lngPad;
+  $maxLng += $lngPad;
+
+  $counts = array_fill(0, $totalCells, 0);
+
+  foreach ($points as $p) {
+    $lat = (float)$p['latitude'];
+    $lng = (float)$p['longitude'];
+
+    $row = (int)floor((($maxLat - $lat) / ($maxLat - $minLat)) * $rows);
+    $col = (int)floor((($lng - $minLng) / ($maxLng - $minLng)) * $cols);
+
+    $row = max(0, min($rows - 1, $row));
+    $col = max(0, min($cols - 1, $col));
+
+    $idx = ($row * $cols) + $col;
+    $counts[$idx]++;
+  }
+
+  $maxCount = max($counts);
+  $cells = [];
+
+  foreach ($counts as $count) {
+    if ($count <= 0 || $maxCount <= 0) {
+      $cells[] = 'l0';
+      continue;
+    }
+
+    $ratio = $count / $maxCount;
+    if ($maxCount >= 4 && $count === $maxCount) {
+      $cells[] = 'lh';
+    } elseif ($ratio >= 0.80) {
+      $cells[] = 'l4';
+    } elseif ($ratio >= 0.60) {
+      $cells[] = 'l3';
+    } elseif ($ratio >= 0.40) {
+      $cells[] = 'l2';
+    } else {
+      $cells[] = 'l1';
+    }
+  }
+
+  return [
+    'success' => true,
+    'cells' => $cells,
+    'points' => count($points),
+    'updatedAt' => time(),
+  ];
+}
+
+if (($_GET['action'] ?? '') === 'heatmap_data') {
+  header('Content-Type: application/json');
+  try {
+    echo json_encode(buildHeatmapData($pdo, 7, 7));
+  } catch (Throwable $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+  }
+  exit();
+}
+
+$heatmapData = buildHeatmapData($pdo, 7, 7);
+$initialHeatmapCellsJson = json_encode($heatmapData['cells']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pin and Throw — Officer Command Center</title>
+<title>Admin Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -207,9 +332,8 @@ function statusLabel($s) {
   /* ── SIDEBAR ── */
   .sidebar { width: var(--sidebar-w); background: #1a7a3e; border-right: 1px solid #155e30; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
   .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.15); }
-  .sidebar-logo .brand { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
-  .logo-pin { width: 28px; height: 28px; background: #fff; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg); flex-shrink: 0; position: relative; }
-  .logo-pin::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:10px; height:10px; background:#1a7a3e; border-radius:50%; }
+  .sidebar-logo .brand { display: block; }
+  .sidebar-logo .brand-logo-img { width: 140px; max-width: 100%; height: auto; display: block; }
   .sidebar-logo .sub { font-size: 10px; color: rgba(255,255,255,0.6); font-family: 'DM Mono', monospace; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
   .nav-section { padding: 20px 14px 0; flex: 1; }
   .nav-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.45); padding: 0 10px; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
@@ -384,28 +508,27 @@ function statusLabel($s) {
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="brand"><div class="logo-pin"></div> Pin &amp; Throw</div>
-    <div class="sub">Officer Command Center</div>
+    <div class="brand"><img src="resources/logo (2).png" alt="Pin and Throw" class="brand-logo-img"></div>
+    <div class="sub">Admin Dashboard</div>
   </div>
   <nav class="nav-section">
     <div class="nav-label">Main</div>
-    <a class="nav-item active" href="admin_dashboard.php"><span class="nav-icon">🗺️</span> Dashboard</a>
-    <a class="nav-item" href="admin_dashboard.php?tab=pending"><span class="nav-icon">📋</span> All Reports
+    <a class="nav-item active" href="admin_dashboard.php"><span class="nav-icon"></span> Dashboard</a>
+    <a class="nav-item" href="admin_dashboard.php?tab=pending"><span class="nav-icon"></span> All Reports
       <span class="nav-badge"><?= intval($tab_counts['pending'] ?? 0) ?></span>
     </a>
-    <a class="nav-item" href="admin_dashboard.php?tab=pending"><span class="nav-icon">⚠️</span> High Priority
+    <a class="nav-item" href="admin_dashboard.php?tab=pending"><span class="nav-icon"></span> High Priority
       <span class="nav-badge"><?= count($alerts) ?></span>
     </a>
     <div class="nav-group-gap"></div>
     <div class="nav-label">Management</div>
-    <a class="nav-item" href="admin_dashboard.php?tab=verified"><span class="nav-icon">✅</span> Verified</a>
-    <a class="nav-item" href="admin_dashboard.php?tab=inprogress"><span class="nav-icon">🔄</span> In-Progress</a>
-    <a class="nav-item" href="admin_dashboard.php?tab=resolved"><span class="nav-icon">📁</span> Resolved Archive</a>
+    <a class="nav-item" href="admin_dashboard.php?tab=verified"><span class="nav-icon"></span> Verified</a>
+    <a class="nav-item" href="admin_dashboard.php?tab=inprogress"><span class="nav-icon"></span> In-Progress</a>
+    <a class="nav-item" href="admin_dashboard.php?tab=resolved"><span class="nav-icon"></span> Resolved Archive</a>
     <div class="nav-group-gap"></div>
     <div class="nav-label">Admin</div>
-    <a class="nav-item" href="analytics.php"><span class="nav-icon">📊</span> Analytics</a>
-    <a class="nav-item" href="user_management.php"><span class="nav-icon">👥</span> User Management</a>
-    <a class="nav-item" href="settings.php"><span class="nav-icon">⚙️</span> Settings</a>
+    <a class="nav-item" href="analytics.php"><span class="nav-icon"></span> Analytics</a>
+    <a class="nav-item" href="user_management.php"><span class="nav-icon"></span> User Management</a>
   </nav>
   <div class="sidebar-footer">
     <div class="officer-card">
@@ -423,15 +546,11 @@ function statusLabel($s) {
 <div class="main">
   <div class="topbar">
     <div>
-      <div class="topbar-title">Officer Dashboard</div>
+      <div class="topbar-title">Admin Dashboard</div>
       <div class="topbar-subtitle">Brgy. Pio Del Pilar, Makati City</div>
     </div>
     <div class="topbar-right">
       <div class="live-badge"><div class="live-dot"></div> LIVE MONITORING</div>
-      <a class="btn-icon" href="notifications.php" title="Notifications">🔔
-        <?php if (!empty($alerts)): ?><div class="notif-dot"></div><?php endif; ?>
-      </a>
-      <a class="btn-icon" href="export.php" title="Export">📤</a>
     </div>
   </div>
 
@@ -440,25 +559,25 @@ function statusLabel($s) {
     <!-- STATS -->
     <div class="stat-grid">
       <div class="stat-card orange">
-        <div class="stat-icon">🗑️</div>
+        <div class="stat-icon"></div>
         <div class="stat-label">Pending Reports</div>
         <div class="stat-val"><?= intval($counts['pending'] ?? 0) ?></div>
         <div class="stat-delta">Awaiting action</div>
       </div>
       <div class="stat-card blue">
-        <div class="stat-icon">🔄</div>
+        <div class="stat-icon"></div>
         <div class="stat-label">In-Progress</div>
         <div class="stat-val"><?= intval($counts['inprogress'] ?? 0) ?></div>
         <div class="stat-delta">Crews active</div>
       </div>
       <div class="stat-card green">
-        <div class="stat-icon">✅</div>
+        <div class="stat-icon"></div>
         <div class="stat-label">Resolved</div>
         <div class="stat-val"><?= intval($counts['resolved'] ?? 0) ?></div>
         <div class="stat-delta up">Total resolved</div>
       </div>
       <div class="stat-card yellow">
-        <div class="stat-icon">📋</div>
+        <div class="stat-icon"></div>
         <div class="stat-label">Total Reports</div>
         <div class="stat-val"><?= intval($counts['total'] ?? 0) ?></div>
         <div class="stat-delta">All time</div>
@@ -547,7 +666,7 @@ function statusLabel($s) {
                 <?php if (!empty($reports[0]['imageUrl'])): ?>
                   <img id="detailImg" src="<?= htmlspecialchars($reports[0]['imageUrl']) ?>" alt="Proof">
                 <?php else: ?>
-                  <span id="detailImgPlaceholder">🗑️</span>
+                  <span id="detailImgPlaceholder"></span>
                 <?php endif; ?>
                 <div class="detail-img-label">IMAGE PROOF</div>
               </div>
@@ -586,17 +705,22 @@ function statusLabel($s) {
 
               <input type="hidden" id="detailReportId" value="<?= !empty($reports) ? intval($reports[0]['report_ID']) : '' ?>">
 
-              <div class="field-label">Update Status</div>
-              <select class="status-select" id="statusSelect">
-                <option value="pending">Pending</option>
-                <option value="verified">Verified</option>
-                <option value="inprogress">In-Progress</option>
-                <option value="resolved">Resolved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+              <?php if (!empty($reports)): ?>
+                <div class="field-label">Update Status</div>
+                <select class="status-select" id="statusSelect">
+                  <option value="pending">Pending</option>
+                  <option value="verified">Verified</option>
+                  <option value="inprogress">In-Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
 
-              <button class="btn-primary" onclick="saveAction()">💾 Save &amp; Notify Resident</button>
-              <button class="btn-danger"  onclick="rejectReport()">✕ Reject Report</button>
+                <button class="btn-primary" onclick="saveAction()"> Save &amp; Notify Resident</button>
+                <button class="btn-danger"  onclick="rejectReport()">✕ Reject Report</button>
+              <?php else: ?>
+                <div class="field-label">Update Status</div>
+                <div class="empty-state" style="padding:10px 0 0;text-align:left;">No report selected.</div>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -740,8 +864,9 @@ function statusLabel($s) {
             <div class="empty-state">No recent activity.</div>
           <?php else: ?>
             <?php foreach ($activity as $a):
-              $dotClass = match($a['status']) { 'resolved' => 'green', 'inprogress' => 'orange', default => 'blue' };
-              $icon = match($a['status']) { 'resolved' => '✅', 'inprogress' => '🔄', 'rejected' => '✕', default => '📋' };
+              $statusNorm = strtolower((string)$a['status']);
+              $dotClass = match($statusNorm) { 'resolved' => 'green', 'inprogress' => 'orange', default => 'blue' };
+              $icon = match($statusNorm) { 'resolved' => '✅', 'inprogress' => '🔄', 'rejected' => '✕', default => '📋' };
               $when = date('M d · h:i A', strtotime($a['timestamp']));
             ?>
             <div class="tl-item">
@@ -769,18 +894,19 @@ function selectReport(el) {
   el.classList.add('selected');
 
   const d = el.dataset;
+  const normalizedStatus = String(d.status || '').toLowerCase();
   document.getElementById('detailId').textContent       = '#RPT-' + String(d.id).padStart(4,'0');
   document.getElementById('detailReporter').textContent = d.reporter;
   document.getElementById('detailLoc').textContent      = d.loc;
   document.getElementById('detailDate').textContent     = d.date;
   document.getElementById('detailDesc').textContent     = d.desc;
-  document.getElementById('statusSelect').value         = d.status;
+  document.getElementById('statusSelect').value         = normalizedStatus;
   document.getElementById('detailReportId').value       = d.id;
   document.getElementById('detailCoords').textContent   = d.lat ? d.lat + '° N, ' + d.lng + '° E' : 'No coordinates';
 
   const badge = document.getElementById('detailBadge');
-  badge.textContent = statusLabel(d.status);
-  badge.className   = 'status-pill ' + statusClass(d.status);
+  badge.textContent = statusLabel(normalizedStatus);
+  badge.className   = 'status-pill ' + statusClass(normalizedStatus);
 
   const imgEl = document.getElementById('detailImg');
   const placeholder = document.getElementById('detailImgPlaceholder');
@@ -811,7 +937,10 @@ function saveAction() {
   form.append('status',    status);
 
   fetch('admin_dashboard.php', { method: 'POST', body: form })
-    .then(r => r.json())
+    .then(r => r.text().then(text => {
+      try { return JSON.parse(text); }
+      catch { throw new Error('Unexpected server response.'); }
+    }))
     .then(data => {
       if (data.success) {
         showToast('✅ Status updated — resident notified');
@@ -828,7 +957,7 @@ function saveAction() {
         showToast('❌ Error: ' + data.message);
       }
     })
-    .catch(() => showToast('❌ Network error. Please try again.'));
+    .catch(err => showToast('❌ ' + (err.message || 'Network error. Please try again.')));
 }
 
 function rejectReport() {
@@ -838,10 +967,12 @@ function rejectReport() {
 
 // ── HELPERS ───────────────────────────────────────────────────
 function statusClass(s) {
+  s = String(s || '').toLowerCase();
   const map = { verified:'verified', resolved:'resolved', rejected:'rejected', inprogress:'verified' };
   return map[s] || 'pending';
 }
 function statusLabel(s) {
+  s = String(s || '').toLowerCase();
   const map = { inprogress:'In-Progress', pending:'Pending', verified:'Verified', resolved:'Resolved', rejected:'Rejected' };
   return map[s] || s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -852,24 +983,49 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── HEATMAP (static visual) ───────────────────────────────────
-(function() {
+// ── HEATMAP (live from DB) ───────────────────────────────────
+function renderHeatmap(cells) {
   const grid = document.getElementById('heatmapGrid');
-  const cells = ['l0','l1','l0','l2','l1','l0','l1','l2','l1','l3','l2','l0','l1','l2','l4','l3','l2','l4','l3','l1','l0','lh','l4','l3','l2','l4','l2','l1','l2','l3','l4','l1','l3','l3','l0','l1','l0','l2','l0','l1','l2','l1','l0','l1','l1','l0','l0','l1','l0'];
-  cells.forEach(cls => {
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  (cells || []).forEach(cls => {
     const c = document.createElement('div');
     c.className = 'heatmap-cell ' + cls;
     c.title = 'Zone block';
     grid.appendChild(c);
   });
-})();
+}
+
+const INITIAL_HEATMAP_CELLS = <?= $initialHeatmapCellsJson ?: '[]' ?>;
+renderHeatmap(INITIAL_HEATMAP_CELLS);
+
+let heatmapRequestInFlight = false;
+function refreshHeatmap() {
+  if (heatmapRequestInFlight) return;
+  heatmapRequestInFlight = true;
+
+  fetch('admin_dashboard.php?action=heatmap_data', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.success && Array.isArray(data.cells)) {
+        renderHeatmap(data.cells);
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      heatmapRequestInFlight = false;
+    });
+}
+
+setInterval(refreshHeatmap, 10000);
 
 // ── PRE-SELECT FIRST ROW ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const first = document.querySelector('.report-row');
   if (first) {
     // Status dropdown pre-select
-    document.getElementById('statusSelect').value = first.dataset.status || 'pending';
+    document.getElementById('statusSelect').value = String(first.dataset.status || 'pending').toLowerCase();
   }
 });
 </script>
