@@ -335,6 +335,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root {
     --bg: #f0f7f2;
@@ -450,10 +451,10 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
   .detail-img { width:100%; height:140px; background:#e8f5ee; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; font-size:32px; overflow:hidden; position:relative; }
   .detail-img img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
   .detail-img-label { position:absolute; bottom:8px; left:8px; background:rgba(0,0,0,.5); border-radius:4px; font-size:10px; padding:3px 7px; font-family:'DM Mono',monospace; color:#fff; }
-  .detail-map { width:100%; height:110px; background:linear-gradient(135deg,#e8f5ee,#d4ede0); border-radius:8px; margin-bottom:16px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
-  .detail-map-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(26,122,62,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(26,122,62,.08) 1px,transparent 1px); background-size:20px 20px; }
-  .detail-map-dot { width:14px; height:14px; background:var(--warn); border-radius:50%; border:2px solid rgba(255,255,255,.7); box-shadow:0 0 0 6px rgba(217,79,30,.2); position:relative; z-index:2; }
-  .detail-map-coords { position:absolute; bottom:8px; right:8px; font-size:9px; font-family:'DM Mono',monospace; color:#1a7a3e; opacity:.8; }
+  .detail-map { width:100%; height:160px; border:1px solid var(--border); border-radius:8px; margin-bottom:16px; position:relative; overflow:hidden; background:#e8f5ee; }
+  #detailLeafletMap { position:absolute; inset:0; }
+  .detail-map .leaflet-control-attribution { font-size:8px; background:rgba(255,255,255,.8); }
+  .detail-map-coords { position:absolute; bottom:8px; right:8px; font-size:9px; font-family:'DM Mono',monospace; color:#1a7a3e; background:rgba(255,255,255,.86); padding:2px 6px; border-radius:4px; z-index:500; }
   .detail-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; font-size:12.5px; }
   .detail-key { color:var(--muted); flex-shrink:0; width:90px; }
   .detail-val { text-align:right; font-weight:500; font-size:12px; }
@@ -698,8 +699,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
 
               <!-- Map -->
               <div class="detail-map">
-                <div class="detail-map-grid"></div>
-                <div class="detail-map-dot"></div>
+                <div id="detailLeafletMap"></div>
                 <div class="detail-map-coords" id="detailCoords">
                   <?= !empty($reports[0]['latitude']) ? $reports[0]['latitude'].'° N, '.$reports[0]['longitude'].'° E' : 'No coordinates' ?>
                 </div>
@@ -912,7 +912,82 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
 
 <div class="toast" id="toast"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+let detailMap = null;
+let detailMarker = null;
+const DETAIL_DEFAULT_CENTER = [14.5547, 121.0244];
+
+function parseCoord(value) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isValidLatLng(lat, lng) {
+  return lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function formatCoordLabel(lat, lng) {
+  const latDir = lat >= 0 ? 'N' : 'S';
+  const lngDir = lng >= 0 ? 'E' : 'W';
+  return Math.abs(lat).toFixed(6) + '° ' + latDir + ', ' + Math.abs(lng).toFixed(6) + '° ' + lngDir;
+}
+
+function updateDetailMap(latValue, lngValue) {
+  if (!detailMap) return;
+
+  const lat = parseCoord(latValue);
+  const lng = parseCoord(lngValue);
+  const coordsEl = document.getElementById('detailCoords');
+
+  if (!isValidLatLng(lat, lng)) {
+    if (detailMarker) {
+      detailMap.removeLayer(detailMarker);
+      detailMarker = null;
+    }
+    detailMap.setView(DETAIL_DEFAULT_CENTER, 14);
+    coordsEl.textContent = 'No coordinates';
+    return;
+  }
+
+  const pos = [lat, lng];
+  if (!detailMarker) {
+    detailMarker = L.marker(pos).addTo(detailMap);
+  } else {
+    detailMarker.setLatLng(pos);
+  }
+  detailMap.setView(pos, 17);
+  coordsEl.textContent = formatCoordLabel(lat, lng);
+}
+
+function initDetailMap() {
+  const mapEl = document.getElementById('detailLeafletMap');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  detailMap = L.map(mapEl, {
+    zoomControl: true,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    touchZoom: false
+  }).setView(DETAIL_DEFAULT_CENTER, 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(detailMap);
+
+  const selectedRow = document.querySelector('.report-row.selected') || document.querySelector('.report-row');
+  if (selectedRow) {
+    updateDetailMap(selectedRow.dataset.lat, selectedRow.dataset.lng);
+  }
+
+  setTimeout(() => detailMap.invalidateSize(), 150);
+  window.addEventListener('resize', () => detailMap && detailMap.invalidateSize());
+}
+
 // ── SELECT REPORT ─────────────────────────────────────────────
 function selectReport(el) {
   document.querySelectorAll('.report-row').forEach(r => r.classList.remove('selected'));
@@ -927,7 +1002,7 @@ function selectReport(el) {
   document.getElementById('detailDesc').textContent     = d.desc;
   document.getElementById('statusSelect').value         = normalizedStatus;
   document.getElementById('detailReportId').value       = d.id;
-  document.getElementById('detailCoords').textContent   = d.lat ? d.lat + '° N, ' + d.lng + '° E' : 'No coordinates';
+  updateDetailMap(d.lat, d.lng);
 
   const badge = document.getElementById('detailBadge');
   badge.textContent = statusLabel(normalizedStatus);
@@ -1047,6 +1122,8 @@ setInterval(refreshHeatmap, 10000);
 
 // ── PRE-SELECT FIRST ROW ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  initDetailMap();
+
   const first = document.querySelector('.report-row');
   if (first) {
     // Status dropdown pre-select
