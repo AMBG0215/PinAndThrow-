@@ -1,9 +1,9 @@
 <?php
 $host = 'localhost';
-$port = 3307;
+$port = 3306;
 $db   = 'pin_and_throw';
 $user = 'root'; 
-$pass = '1234567890';     
+$pass = 'Mika0215!!!';     
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";

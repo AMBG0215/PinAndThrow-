@@ -29,10 +29,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 $host   = 'localhost';
-$port   = 3307;
+$port   = 3306;
 $dbname = 'pin_and_throw';
 $dbuser = 'root';
-$dbpass = '1234567890';
+$dbpass = 'Mika0215!!!';
 
 try {
   $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass);
