@@ -3,6 +3,67 @@ session_start();
 require 'database.php';
 header('Content-Type: application/json');
 
+function resolveExistingImagePath(string $imageUrl): string {
+    $imageUrl = trim(str_replace('\\', '/', $imageUrl));
+    if ($imageUrl === '') {
+        return '';
+    }
+
+    if (preg_match('#^(https?:)?//#i', $imageUrl) || str_starts_with($imageUrl, 'data:')) {
+        return $imageUrl;
+    }
+
+    $imageUrl = ltrim($imageUrl, '/');
+    if (preg_match('#^uploads/reports/#i', $imageUrl)) {
+        return $imageUrl;
+    }
+
+    $basename = basename($imageUrl);
+    $candidate = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reports' . DIRECTORY_SEPARATOR . $basename;
+    if (is_file($candidate)) {
+        return 'uploads/reports/' . $basename;
+    }
+
+    return '';
+}
+
+function storeUploadedReportImage(array $file): string {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Image upload failed.');
+    }
+
+    $tmpPath = $file['tmp_name'] ?? '';
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        throw new RuntimeException('Invalid uploaded image.');
+    }
+
+    $mimeType = mime_content_type($tmpPath) ?: '';
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+    ];
+
+    if (!isset($allowedTypes[$mimeType])) {
+        throw new RuntimeException('Only JPG, PNG, GIF, and WEBP images are allowed.');
+    }
+
+    $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reports';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('Unable to create the uploads directory.');
+    }
+
+    $filename = sprintf('report_%s_%s.%s', date('YmdHis'), bin2hex(random_bytes(6)), $allowedTypes[$mimeType]);
+    $destination = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+
+    if (!move_uploaded_file($tmpPath, $destination)) {
+        throw new RuntimeException('Unable to save the uploaded image.');
+    }
+
+    return 'uploads/reports/' . $filename;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Invalid request method.']);
     exit;
@@ -28,7 +89,7 @@ $resident_email = trim($_POST['resident_email'] ?? '');
 
 $category_id = $_POST['category_id'] ?? null;
 $description = trim($_POST['description'] ?? '');
-$imageUrl = $_POST['imageUrl'] ?? '';
+$imageUrl = resolveExistingImagePath($_POST['imageUrl'] ?? '');
 $latitude = $_POST['latitude'] ?? null;
 $longitude = $_POST['longitude'] ?? null;
 $locationName = trim($_POST['locationName'] ?? '');
@@ -68,6 +129,10 @@ try {
         exit;
     }
 
+    if (isset($_FILES['report_image']) && ($_FILES['report_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+        $imageUrl = storeUploadedReportImage($_FILES['report_image']);
+    }
+
     $stmtReport = $pdo->prepare("INSERT INTO reports (resident_ID, category_id, description, imageUrl, status) VALUES (?, ?, ?, ?, 'Pending')");
     $stmtReport->execute([$resident_ID, $category_id, $description, $imageUrl]);
 
@@ -79,7 +144,7 @@ try {
     $pdo->commit();
     echo json_encode(['status' => 'success', 'message' => 'Report submitted successfully.', 'report_ID' => $report_ID]);
 
-} catch (\PDOException $e) {
+} catch (\Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }

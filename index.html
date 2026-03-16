@@ -205,15 +205,143 @@
         var pinnedLatLng = null;
         var mapInstance = null;
         var mapMarker = null;
-        var reports = JSON.parse(localStorage.getItem('pat_reports') || '[]');
+        var reports = [];
         var selectedPhotos = [];
         var MAX_PHOTOS = 5;
+        var activeAddressLookup = 0;
         var WASTE_CATEGORY_MAP = {
             'Hazardous': 1,
             'Pharmaceutical': 2,
             'Electrical': 3,
             'Non-Segregated': 4
         };
+
+        function formatReportId(reportId) {
+            return 'RPT-' + String(reportId).padStart(4, '0');
+        }
+
+        function normalizeStatus(status) {
+            return String(status || '').toLowerCase();
+        }
+
+        function getStatusLabel(status) {
+            var labels = {
+                pending: 'Pending',
+                verified: 'Verified',
+                inprogress: 'In Progress',
+                resolved: 'Resolved',
+                rejected: 'Rejected'
+            };
+            return labels[normalizeStatus(status)] || 'Unknown';
+        }
+
+        function getStatusMessage(status) {
+            var messages = {
+                pending: 'Your report is waiting for officer review.',
+                verified: 'Your report has been verified by the barangay.',
+                inprogress: 'A cleanup crew has been dispatched to your location.',
+                resolved: 'This report has been resolved. Thank you.',
+                rejected: 'This report was not actionable. Please resubmit with more detail.'
+            };
+            return messages[normalizeStatus(status)] || 'No status update available yet.';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function mapReportFromApi(item) {
+            return {
+                id: formatReportId(item.report_ID),
+                numericId: Number(item.report_ID),
+                address: item.locationName || 'Unknown location',
+                desc: item.description || '',
+                waste: item.categoryName || '',
+                lat: item.latitude || '',
+                lng: item.longitude || '',
+                status: normalizeStatus(item.status),
+                date: item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-PH', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                }) : '',
+                timestamp: item.timestamp || '',
+                imageUrl: item.imageUrl || ''
+            };
+        }
+
+        function loadResidentReports() {
+            if (!session || !session.email) {
+                reports = [];
+                return Promise.resolve([]);
+            }
+
+            return fetch('get_report.php?resident_email=' + encodeURIComponent(session.email), {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }).then(function(res) {
+                return res.json();
+            }).then(function(data) {
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Failed to load resident reports.');
+                }
+
+                reports = (data.data || []).map(mapReportFromApi);
+                return reports;
+            }).catch(function(err) {
+                reports = [];
+                console.error(err);
+                return [];
+            });
+        }
+
+        function reverseGeocodePin(lat, lng) {
+            activeAddressLookup += 1;
+            var lookupId = activeAddressLookup;
+            var addressField = document.getElementById('inputAddress');
+            addressField.value = 'Resolving pinned address...';
+
+            var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&zoom=18&addressdetails=1';
+            return fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en'
+                }
+            }).then(function(res) {
+                if (!res.ok) {
+                    throw new Error('Address lookup failed.');
+                }
+                return res.json();
+            }).then(function(data) {
+                if (lookupId !== activeAddressLookup) {
+                    return;
+                }
+
+                var address = data && data.address ? data.address : {};
+                var parts = [
+                    address.house_number,
+                    address.road,
+                    address.suburb || address.neighbourhood || address.quarter,
+                    address.city_district || address.city || address.town || address.village,
+                    address.state,
+                    address.postcode
+                ].filter(Boolean);
+
+                addressField.value = parts.join(', ') || data.display_name || (lat.toFixed(5) + ', ' + lng.toFixed(5));
+            }).catch(function() {
+                if (lookupId !== activeAddressLookup) {
+                    return;
+                }
+                addressField.value = lat.toFixed(5) + ', ' + lng.toFixed(5);
+                showToast('Pinned location saved, but the address lookup failed.', true);
+            });
+        }
 
         function initSession() {
             var raw = localStorage.getItem('pat_session');
@@ -232,6 +360,7 @@
                 document.getElementById('aboutSection').style.display = 'none';
                 document.getElementById('historyHint').style.display = 'none';
                 document.getElementById('inputName').value = session.name;
+                loadResidentReports();
             }
         }
 
@@ -267,6 +396,7 @@
                 var coordEl = document.getElementById('mapCoords');
                 coordEl.textContent = e.latlng.lat.toFixed(5) + ' N, ' + e.latlng.lng.toFixed(5) + ' E';
                 coordEl.style.display = 'block';
+                reverseGeocodePin(e.latlng.lat, e.latlng.lng);
             });
 
             mapInstance = map;
@@ -377,6 +507,7 @@
             document.getElementById('inputAddress').value = '';
             document.getElementById('inputDesc').value = '';
             selectedWaste = '';
+            activeAddressLookup += 1;
             var header = document.getElementById('wasteDropHeader');
             var sel = document.getElementById('wasteSelected');
             sel.innerHTML = 'T y p e &nbsp; o f &nbsp; W a s t e';
@@ -445,7 +576,10 @@
             var form = new FormData();
             form.append('category_id', categoryId);
             form.append('description', desc);
-            form.append('imageUrl', photos[0] ? photos[0].name : '');
+            if (photos[0]) {
+                form.append('report_image', photos[0]);
+                form.append('imageUrl', photos[0].name);
+            }
             form.append('latitude', pinnedLatLng.lat.toFixed(8));
             form.append('longitude', pinnedLatLng.lng.toFixed(8));
             form.append('locationName', addr);
@@ -464,27 +598,8 @@
                     return;
                 }
 
-                var reportId = 'RPT-' + String(data.report_ID).padStart(4, '0');
-                var report = {
-                    id: reportId,
-                    name: name,
-                    address: addr,
-                    desc: desc,
-                    waste: selectedWaste,
-                    lat: pinnedLatLng.lat.toFixed(5),
-                    lng: pinnedLatLng.lng.toFixed(5),
-                    status: 'pending',
-                    date: new Date().toLocaleDateString('en-PH', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    }),
-                    user: session.username
-                };
-
-                reports.push(report);
-                localStorage.setItem('pat_reports', JSON.stringify(reports));
-                showToast('Report ' + reportId + ' submitted. We will review it shortly.');
+                loadResidentReports();
+                showToast('Report ' + formatReportId(data.report_ID) + ' submitted. We will review it shortly.');
                 setTimeout(clearForm, 2500);
             }).catch(function() {
                 showToast('Failed to submit report. Please try again.', true);
@@ -515,22 +630,28 @@
                 showToast('Please login to view your report history.', true);
                 return;
             }
+
             var list = document.getElementById('historyList');
-            var myReports = reports.filter(function(r) {
-                return r.user === session.username;
-            });
-            if (myReports.length === 0) {
-                list.innerHTML = '<div class="empty-history">No reports submitted yet.</div>';
-            } else {
+            list.innerHTML = '<div class="empty-history">Loading reports...</div>';
+            document.getElementById('historyModal').classList.add('open');
+
+            loadResidentReports().then(function(myReports) {
+                if (!myReports.length) {
+                    list.innerHTML = '<div class="empty-history">No reports submitted yet.</div>';
+                    return;
+                }
+
                 list.innerHTML = myReports.slice().reverse().map(function(r) {
+                    var trimmedDesc = r.desc.length > 60 ? r.desc.substring(0, 60) + '...' : r.desc;
                     return '<div class="history-item">' +
-                        '<div class="h-id">' + r.id + ' &bull; ' + r.date + '</div>' +
-                        '<div class="h-desc">' + r.desc.substring(0, 60) + (r.desc.length > 60 ? '...' : '') + '</div>' +
-                        '<span class="h-badge ' + r.status + '">' + r.status.charAt(0).toUpperCase() + r.status.slice(1) + '</span>' +
+                        '<div class="h-id">' + escapeHtml(r.id) + ' &bull; ' + escapeHtml(r.date) + '</div>' +
+                        '<div class="h-desc">' + escapeHtml(trimmedDesc) + '</div>' +
+                        '<span class="h-badge ' + escapeHtml(r.status) + '">' + escapeHtml(getStatusLabel(r.status)) + '</span>' +
                         '</div>';
                 }).join('');
-            }
-            document.getElementById('historyModal').classList.add('open');
+            }).catch(function() {
+                list.innerHTML = '<div class="empty-history">Unable to load reports right now.</div>';
+            });
         }
 
         function doTrack() {
@@ -540,46 +661,33 @@
                 return;
             }
 
-            var found = null;
-            for (var i = 0; i < reports.length; i++) {
-                if (reports[i].id === val) {
-                    found = reports[i];
-                    break;
-                }
-            }
-
-            var labels = {
-                pending: 'Pending',
-                verified: 'Verified',
-                inprogress: 'In Progress',
-                resolved: 'Resolved',
-                rejected: 'Rejected'
-            };
-            var msgs = {
-                pending: 'Your report is waiting for officer review.',
-                verified: 'Your report has been verified by the barangay.',
-                inprogress: 'A cleanup crew has been dispatched to your location.',
-                resolved: 'This report has been resolved. Thank you.',
-                rejected: 'This report was not actionable. Please resubmit with more detail.'
-            };
-
-            var status, label, msg;
-            if (found) {
-                status = found.status;
-                label = labels[status] || status;
-                msg = msgs[status] || '';
-            } else {
-                var demoStatuses = ['pending', 'verified', 'inprogress', 'resolved'];
-                status = demoStatuses[Math.floor(Math.random() * demoStatuses.length)];
-                label = labels[status];
-                msg = msgs[status];
-            }
-
             document.getElementById('trackResultId').textContent = val;
-            document.getElementById('trackResultStatus').textContent = label;
-            document.getElementById('trackResultStatus').className = 'track-status ' + status;
-            document.getElementById('trackResultMsg').textContent = msg;
+            document.getElementById('trackResultStatus').textContent = 'Checking...';
+            document.getElementById('trackResultStatus').className = 'track-status pending';
+            document.getElementById('trackResultMsg').textContent = 'Looking up the latest report status.';
             document.getElementById('trackResult').classList.add('show');
+
+            fetch('get_report.php?report_reference=' + encodeURIComponent(val), {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }).then(function(res) {
+                return res.json();
+            }).then(function(data) {
+                var found = data && data.status === 'success' && data.data && data.data.length ? mapReportFromApi(data.data[0]) : null;
+                if (!found) {
+                    throw new Error('Report not found.');
+                }
+
+                document.getElementById('trackResultId').textContent = found.id;
+                document.getElementById('trackResultStatus').textContent = getStatusLabel(found.status);
+                document.getElementById('trackResultStatus').className = 'track-status ' + found.status;
+                document.getElementById('trackResultMsg').textContent = getStatusMessage(found.status);
+            }).catch(function() {
+                document.getElementById('trackResultStatus').textContent = 'Not Found';
+                document.getElementById('trackResultStatus').className = 'track-status rejected';
+                document.getElementById('trackResultMsg').textContent = 'No report matched that ID.';
+            });
         }
 
         function showToast(msg, isError) {

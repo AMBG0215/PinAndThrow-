@@ -205,6 +205,30 @@ function statusLabel($s) {
     };
 }
 
+function resolveImageUrl(?string $imageUrl): string {
+  $imageUrl = trim(str_replace('\\', '/', (string)$imageUrl));
+  if ($imageUrl === '') {
+    return '';
+  }
+
+  if (preg_match('#^(https?:)?//#i', $imageUrl) || str_starts_with($imageUrl, 'data:')) {
+    return $imageUrl;
+  }
+
+  $imageUrl = ltrim($imageUrl, '/');
+  if (preg_match('#^uploads/reports/#i', $imageUrl)) {
+    return $imageUrl;
+  }
+
+  $basename = basename($imageUrl);
+  $candidate = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reports' . DIRECTORY_SEPARATOR . $basename;
+  if (is_file($candidate)) {
+    return 'uploads/reports/' . $basename;
+  }
+
+  return '';
+}
+
 function buildHeatmapData(PDO $pdo, int $rows = 7, int $cols = 7): array {
   $stmt = $pdo->query("\n        SELECT latitude, longitude\n        FROM Locations\n        WHERE latitude IS NOT NULL\n          AND longitude IS NOT NULL\n    ");
   $points = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -618,7 +642,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                   $date = date('M d, Y · h:i A', strtotime($r['timestamp']));
                   $cls  = statusClass($r['status']);
                   $lbl  = statusLabel($r['status']);
-                  $img  = htmlspecialchars($r['imageUrl'] ?? '');
+                  $img  = htmlspecialchars(resolveImageUrl($r['imageUrl'] ?? ''));
                   $lat  = htmlspecialchars($r['latitude'] ?? '');
                   $lng  = htmlspecialchars($r['longitude'] ?? '');
                 ?>
@@ -663,8 +687,9 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
             <div class="detail-body">
               <!-- Image proof -->
               <div class="detail-img" id="detailImgWrap">
-                <?php if (!empty($reports[0]['imageUrl'])): ?>
-                  <img id="detailImg" src="<?= htmlspecialchars($reports[0]['imageUrl']) ?>" alt="Proof">
+                <?php $detailImg = !empty($reports) ? resolveImageUrl($reports[0]['imageUrl'] ?? '') : ''; ?>
+                <?php if ($detailImg !== ''): ?>
+                  <img id="detailImg" src="<?= htmlspecialchars($detailImg) ?>" alt="Proof">
                 <?php else: ?>
                   <span id="detailImgPlaceholder"></span>
                 <?php endif; ?>
