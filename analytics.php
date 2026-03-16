@@ -32,7 +32,7 @@ for ($i = 6; $i >= 0; $i--) {
     ];
 }
 
-$reporterRows = $pdo->query("\n    SELECT\n        u.firstName,\n        u.lastName,\n        COUNT(r.report_ID) AS cnt\n    FROM users u\n    LEFT JOIN reports r ON r.resident_ID = u.user_ID\n    GROUP BY u.user_ID, u.firstName, u.lastName\n    HAVING cnt > 0\n    ORDER BY cnt DESC\n    LIMIT 5\n")->fetchAll(PDO::FETCH_ASSOC);
+$reporterRows = $pdo->query("\n    SELECT\n        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstName, u.lastName)), ''), 'Guest Reporter') AS reporterName,\n        COUNT(r.report_ID) AS cnt\n    FROM reports r\n    LEFT JOIN users u ON r.resident_ID = u.user_ID\n    GROUP BY reporterName\n    HAVING cnt > 0\n    ORDER BY cnt DESC\n    LIMIT 5\n")->fetchAll(PDO::FETCH_ASSOC);
 
 $maxCategory = !empty($categoryRows) ? max(array_map(fn($r) => (int)$r['cnt'], $categoryRows)) : 1;
 $maxLocation = !empty($locationRows) ? max(array_map(fn($r) => (int)$r['cnt'], $locationRows)) : 1;
@@ -205,7 +205,7 @@ $maxDaily = !empty($last7Days) ? max(array_map(fn($r) => (int)$r['count'], $last
             <?php else: ?>
               <?php foreach ($reporterRows as $row): ?>
                 <tr>
-                  <td><?= htmlspecialchars(trim(($row['firstName'] ?? '') . ' ' . ($row['lastName'] ?? ''))) ?></td>
+                  <td><?= htmlspecialchars($row['reporterName']) ?></td>
                   <td><?= (int)$row['cnt'] ?></td>
                 </tr>
               <?php endforeach; ?>

@@ -20,9 +20,15 @@ $resident_ID = $_SESSION['user_id'] ?? $_SESSION['user_ID'] ?? $_GET['resident_I
 $resident_ID = is_numeric($resident_ID) ? (int)$resident_ID : 0;
 $resident_email = trim($_GET['resident_email'] ?? '');
 $report_ID = normalizeReportReference($_GET['report_reference'] ?? $_GET['report_id'] ?? '');
+$sessionRole = strtolower((string)($_SESSION['role'] ?? ''));
 
 if ($resident_ID <= 0 && $resident_email === '' && $report_ID <= 0) {
     echo json_encode(['status' => 'error', 'message' => 'Missing report lookup details.']);
+    exit;
+}
+
+if ($report_ID > 0 && $resident_ID <= 0 && $resident_email === '' && !in_array($sessionRole, ['admin', 'officer'], true)) {
+    echo json_encode(['status' => 'error', 'message' => 'Login is required to track a report.']);
     exit;
 }
 

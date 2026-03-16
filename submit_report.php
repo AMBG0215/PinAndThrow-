@@ -94,7 +94,7 @@ $latitude = $_POST['latitude'] ?? null;
 $longitude = $_POST['longitude'] ?? null;
 $locationName = trim($_POST['locationName'] ?? '');
 
-if (!$category_id || $description === '') {
+if (!$category_id || $description === '' || $resident_name === '') {
     echo json_encode(['status' => 'error', 'message' => 'Missing required report details.']);
     exit;
 }
@@ -102,39 +102,29 @@ if (!$category_id || $description === '') {
 try {
     $pdo->beginTransaction();
 
-    if ($resident_ID <= 0) {
-        if ($resident_email === '' && $resident_username !== '') {
-            $resident_email = strtolower($resident_username) . '@pinandthrow.local';
+    if ($resident_ID <= 0 && $resident_email !== '') {
+        $findResident = $pdo->prepare("SELECT user_ID FROM users WHERE email = ? LIMIT 1");
+        $findResident->execute([$resident_email]);
+        $existing = $findResident->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing && isset($existing['user_ID'])) {
+            $resident_ID = (int)$existing['user_ID'];
+        } else {
+            [$firstName, $lastName] = splitResidentName($resident_name);
+            $createResident = $pdo->prepare("INSERT INTO users (firstName, lastName, email, role, password) VALUES (?, ?, ?, 'Resident', NULL)");
+            $createResident->execute([$firstName, $lastName, $resident_email]);
+            $resident_ID = (int)$pdo->lastInsertId();
         }
-
-        if ($resident_email !== '') {
-            $findResident = $pdo->prepare("SELECT user_ID FROM users WHERE email = ? LIMIT 1");
-            $findResident->execute([$resident_email]);
-            $existing = $findResident->fetch(PDO::FETCH_ASSOC);
-
-            if ($existing && isset($existing['user_ID'])) {
-                $resident_ID = (int)$existing['user_ID'];
-            } else {
-                [$firstName, $lastName] = splitResidentName($resident_name);
-                $createResident = $pdo->prepare("INSERT INTO users (firstName, lastName, email, role, password) VALUES (?, ?, ?, 'Resident', NULL)");
-                $createResident->execute([$firstName, $lastName, $resident_email]);
-                $resident_ID = (int)$pdo->lastInsertId();
-            }
-        }
-    }
-
-    if ($resident_ID <= 0) {
-        $pdo->rollBack();
-        echo json_encode(['status' => 'error', 'message' => 'User not authenticated.']);
-        exit;
     }
 
     if (isset($_FILES['report_image']) && ($_FILES['report_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
         $imageUrl = storeUploadedReportImage($_FILES['report_image']);
     }
 
+    $reportResidentId = $resident_ID > 0 ? $resident_ID : null;
+
     $stmtReport = $pdo->prepare("INSERT INTO reports (resident_ID, category_id, description, imageUrl, status) VALUES (?, ?, ?, ?, 'Pending')");
-    $stmtReport->execute([$resident_ID, $category_id, $description, $imageUrl]);
+    $stmtReport->execute([$reportResidentId, $category_id, $description, $imageUrl]);
 
     $report_ID = (int)$pdo->lastInsertId();
 
@@ -142,7 +132,12 @@ try {
     $stmtLocation->execute([$report_ID, $latitude, $longitude, $locationName]);
 
     $pdo->commit();
-    echo json_encode(['status' => 'success', 'message' => 'Report submitted successfully.', 'report_ID' => $report_ID]);
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'Report submitted successfully.',
+        'report_ID' => $report_ID,
+        'tracking_enabled' => $reportResidentId !== null,
+    ]);
 
 } catch (\Throwable $e) {
     if ($pdo->inTransaction()) {

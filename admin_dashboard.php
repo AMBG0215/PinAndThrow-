@@ -70,7 +70,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     exit();
   }
 
-    // Insert a notification for the resident
+    // Insert a notification only when the report belongs to a resident account.
     $msgMap = [
         'verified'   => 'Your report has been verified by the barangay.',
         'inprogress' => 'A cleanup crew has been dispatched to your reported location.',
@@ -84,18 +84,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     $res = $pdo->prepare("SELECT resident_ID FROM Reports WHERE report_ID = ?");
     $res->execute([$report_id]);
     $report = $res->fetch(PDO::FETCH_ASSOC);
+    $notified = false;
 
-    if ($report) {
+    if ($report && !empty($report['resident_ID'])) {
       try {
         $notif = $pdo->prepare("INSERT INTO Notifications (report_ID, user_ID, message, isRead) VALUES (?, ?, ?, 0)");
         $notif->execute([$report_id, $report['resident_ID'], $message]);
+        $notified = true;
       } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Status saved, but notification failed: ' . $e->getMessage()]);
         exit();
       }
     }
 
-    echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+    echo json_encode(['success' => true, 'message' => 'Status updated successfully', 'notified' => $notified]);
     exit();
 }
 
@@ -116,10 +118,12 @@ if (!in_array($active_tab, $allowed_tabs)) $active_tab = 'pending';
 
 $stmt = $pdo->prepare("
     SELECT r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
-           u.firstName, u.lastName,
+      r.resident_ID,
+      COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstName, u.lastName)), ''), 'Guest Reporter') AS reporterName,
+      u.firstName, u.lastName,
            l.locationName, l.latitude, l.longitude
     FROM Reports r
-    JOIN Users u ON u.user_ID = r.resident_ID
+    LEFT JOIN Users u ON u.user_ID = r.resident_ID
     LEFT JOIN Locations l ON l.report_ID = r.report_ID
   WHERE LOWER(r.status) = ?
     ORDER BY r.timestamp DESC
@@ -637,7 +641,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                 <div class="empty-state">No reports found.</div>
               <?php else: ?>
                 <?php foreach ($reports as $i => $r):
-                  $name = htmlspecialchars($r['firstName'] . ' ' . $r['lastName']);
+                  $name = htmlspecialchars($r['reporterName'] ?? 'Guest Reporter');
                   $loc  = htmlspecialchars($r['locationName'] ?? 'Unknown location');
                   $desc = htmlspecialchars($r['description']);
                   $date = date('M d, Y · h:i A', strtotime($r['timestamp']));
@@ -655,6 +659,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                      data-date="<?= $date ?>"
                      data-desc="<?= $desc ?>"
                      data-status="<?= htmlspecialchars($r['status']) ?>"
+                     data-notify="<?= !empty($r['resident_ID']) ? '1' : '0' ?>"
                      data-img="<?= $img ?>"
                      data-lat="<?= $lat ?>"
                      data-lng="<?= $lng ?>">
@@ -708,7 +713,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
               <div class="detail-row">
                 <span class="detail-key">Reporter</span>
                 <span class="detail-val" id="detailReporter">
-                  <?= !empty($reports) ? htmlspecialchars($reports[0]['firstName'].' '.$reports[0]['lastName']) : '—' ?>
+                  <?= !empty($reports) ? htmlspecialchars($reports[0]['reporterName'] ?? 'Guest Reporter') : '—' ?>
                 </span>
               </div>
               <div class="detail-row">
@@ -740,7 +745,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                   <option value="rejected">Rejected</option>
                 </select>
 
-                <button class="btn-primary" onclick="saveAction()"> Save &amp; Notify Resident</button>
+                <button class="btn-primary" id="saveStatusBtn" onclick="saveAction()"><?= !empty($reports[0]['resident_ID']) ? ' Save &amp; Notify Resident' : ' Save Status' ?></button>
                 <button class="btn-danger"  onclick="rejectReport()">✕ Reject Report</button>
               <?php else: ?>
                 <div class="field-label">Update Status</div>
@@ -1004,6 +1009,11 @@ function selectReport(el) {
   document.getElementById('detailReportId').value       = d.id;
   updateDetailMap(d.lat, d.lng);
 
+  const saveBtn = document.getElementById('saveStatusBtn');
+  if (saveBtn) {
+    saveBtn.innerHTML = d.notify === '1' ? ' Save &amp; Notify Resident' : ' Save Status';
+  }
+
   const badge = document.getElementById('detailBadge');
   badge.textContent = statusLabel(normalizedStatus);
   badge.className   = 'status-pill ' + statusClass(normalizedStatus);
@@ -1043,7 +1053,7 @@ function saveAction() {
     }))
     .then(data => {
       if (data.success) {
-        showToast('✅ Status updated — resident notified');
+        showToast(data.notified ? '✅ Status updated — resident notified' : '✅ Status updated — guest report saved');
         // Update badge + row pill
         const badge = document.getElementById('detailBadge');
         badge.textContent = statusLabel(status);
