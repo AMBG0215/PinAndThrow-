@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id']) || (isset($_SESSION['role']) && !in_array(strto
 
 $host   = 'localhost';
 $dbname = 'pin_and_throw';
+$dbname = 'pinandthrow_db';
 $dbuser = 'root';
 $dbpass = '';
 
