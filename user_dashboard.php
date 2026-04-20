@@ -59,7 +59,8 @@ if (!in_array($active_tab, $allowed_tabs)) $active_tab = 'all';
 if ($active_tab === 'all') {
     $stmt = $pdo->prepare("
         SELECT r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
-               l.locationName, l.latitude, l.longitude
+           r.reject_note,
+           l.locationName, l.latitude, l.longitude
         FROM Reports r
         LEFT JOIN Locations l ON l.report_ID = r.report_ID
         WHERE r.resident_ID = ?
@@ -70,7 +71,8 @@ if ($active_tab === 'all') {
 } else {
     $stmt = $pdo->prepare("
         SELECT r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
-               l.locationName, l.latitude, l.longitude
+           r.reject_note,
+           l.locationName, l.latitude, l.longitude
         FROM Reports r
         LEFT JOIN Locations l ON l.report_ID = r.report_ID
          WHERE r.resident_ID = ? AND LOWER(r.status) = ?
@@ -396,6 +398,7 @@ function resolveImageUrl(?string $imageUrl): string {
                   $img  = htmlspecialchars(resolveImageUrl($r['imageUrl'] ?? ''));
                   $lat  = htmlspecialchars($r['latitude'] ?? '');
                   $lng  = htmlspecialchars($r['longitude'] ?? '');
+                  $rejectNote = htmlspecialchars($r['reject_note'] ?? '');
                 ?>
                 <div class="report-row <?= $i === 0 ? 'selected' : '' ?>"
                      onclick="selectReport(this)"
@@ -404,6 +407,7 @@ function resolveImageUrl(?string $imageUrl): string {
                      data-date="<?= $date ?>"
                      data-desc="<?= $desc ?>"
                      data-status="<?= htmlspecialchars($r['status']) ?>"
+                    data-reject-note="<?= $rejectNote ?>"
                      data-img="<?= $img ?>"
                      data-lat="<?= $lat ?>"
                      data-lng="<?= $lng ?>">
@@ -457,6 +461,10 @@ function resolveImageUrl(?string $imageUrl): string {
               </div>
               <div class="detail-divider"></div>
               <div class="desc-text" id="detailDesc"><?= !empty($reports) ? htmlspecialchars($reports[0]['description']) : 'Select a report to view details.' ?></div>
+              <div class="detail-row" id="detailRejectNoteRow" style="<?= !empty($reports) && strtolower((string)$reports[0]['status']) === 'rejected' ? '' : 'display:none;' ?>">
+                <span class="detail-key">Rejection Note</span>
+                <span class="detail-val" id="detailRejectNote"><?= !empty($reports) ? htmlspecialchars($reports[0]['reject_note'] ?? 'No rejection note provided.') : '—' ?></span>
+              </div>
             </div>
           </div>
         </div>
@@ -581,6 +589,13 @@ function selectReport(el) {
   document.getElementById('detailLoc').textContent    = d.loc;
   document.getElementById('detailDate').textContent   = d.date;
   document.getElementById('detailDesc').textContent   = d.desc;
+  var rejectNoteRow = document.getElementById('detailRejectNoteRow');
+  var rejectNoteVal = document.getElementById('detailRejectNote');
+  if (rejectNoteRow && rejectNoteVal) {
+    var note = String(d.rejectNote || '').trim();
+    rejectNoteVal.textContent = note || 'No rejection note provided.';
+    rejectNoteRow.style.display = String(d.status || '').toLowerCase() === 'rejected' ? 'flex' : 'none';
+  }
   document.getElementById('detailBadge').textContent  = statusLabel(d.status);
   document.getElementById('detailBadge').className    = 'status-pill ' + statusClass(d.status);
   updateDetailMap(d.lat, d.lng);

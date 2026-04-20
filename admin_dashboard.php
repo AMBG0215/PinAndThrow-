@@ -41,6 +41,19 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
+function reportsTableHasColumn(PDO $pdo, string $columnName): bool {
+  static $cache = [];
+
+  if (array_key_exists($columnName, $cache)) {
+    return $cache[$columnName];
+  }
+
+  $stmt = $pdo->prepare("\n    SELECT COUNT(*)\n    FROM INFORMATION_SCHEMA.COLUMNS\n    WHERE TABLE_SCHEMA = DATABASE()\n      AND TABLE_NAME = 'reports'\n      AND COLUMN_NAME = ?\n  ");
+  $stmt->execute([$columnName]);
+
+  return $cache[$columnName] = ((int)$stmt->fetchColumn() > 0);
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     header('Content-Type: application/json');
   $report_id = intval($_POST['report_id']);
@@ -51,6 +64,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     if (!in_array($new_status, $allowed)) {
         echo json_encode(['success' => false, 'message' => 'Invalid status']);
         exit();
+    }
+
+    if ($new_status === 'rejected' && $reject_note === '') {
+      echo json_encode(['success' => false, 'message' => 'Please provide a rejection note.']);
+      exit();
     }
 
   // Map UI statuses to the DB enum values.
@@ -64,8 +82,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
   $db_status = $db_status_map[$new_status] ?? 'Pending';
 
   try {
-    $stmt = $pdo->prepare("UPDATE Reports SET status = ? WHERE report_ID = ?");
-    $stmt->execute([$db_status, $report_id]);
+    $hasRejectNoteColumn = reportsTableHasColumn($pdo, 'reject_note');
+    if ($hasRejectNoteColumn) {
+      $noteToStore = $new_status === 'rejected' ? $reject_note : null;
+      $stmt = $pdo->prepare("UPDATE Reports SET status = ?, reject_note = ? WHERE report_ID = ?");
+      $stmt->execute([$db_status, $noteToStore, $report_id]);
+    } else {
+      $stmt = $pdo->prepare("UPDATE Reports SET status = ? WHERE report_ID = ?");
+      $stmt->execute([$db_status, $report_id]);
+    }
   } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => 'Failed to update status: ' . $e->getMessage()]);
     exit();
@@ -81,7 +106,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     ];
     $message = $msgMap[$new_status] ?? 'Your report status has been updated.';
 
-    if ($new_status === 'rejected' && $reject_note !== '') {
+    if ($new_status === 'rejected') {
         $message .= ' Reason: ' . $reject_note;
     }
 
@@ -121,8 +146,10 @@ $active_tab = $_GET['tab'] ?? 'pending';
 $allowed_tabs = ['pending', 'verified', 'inprogress', 'resolved', 'rejected'];
 if (!in_array($active_tab, $allowed_tabs)) $active_tab = 'pending';
 
+$rejectNoteColumnSql = reportsTableHasColumn($pdo, 'reject_note') ? 'r.reject_note' : 'NULL AS reject_note';
+
 $stmt = $pdo->prepare("
-    SELECT r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
+  SELECT r.report_ID, r.description, r.imageUrl, r.status, {$rejectNoteColumnSql}, r.timestamp,
       r.resident_ID,
       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstName, u.lastName)), ''), 'Guest Reporter') AS reporterName,
       u.firstName, u.lastName,
@@ -138,7 +165,7 @@ $stmt->execute([$active_tab]);
 $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-$tab_counts = $pdo->query("
+$tab_counts = $pdo->query(" 
   SELECT LOWER(status) AS status, COUNT(*) AS cnt FROM Reports GROUP BY LOWER(status)
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -627,6 +654,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
             'pending'    => 'Unverified',
             'inprogress' => 'Active',
             'resolved'   => 'Resolved',
+            'rejected'   => 'Rejected',
           ];
           foreach ($tabs as $key => $label):
             $cnt = intval($tab_counts[$key] ?? 0);
@@ -655,6 +683,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                   $img  = htmlspecialchars(resolveImageUrl($r['imageUrl'] ?? ''));
                   $lat  = htmlspecialchars($r['latitude'] ?? '');
                   $lng  = htmlspecialchars($r['longitude'] ?? '');
+                  $rejectNote = htmlspecialchars($r['reject_note'] ?? '');
                 ?>
                 <div class="report-row <?= $i === 0 ? 'selected' : '' ?>"
                      onclick="selectReport(this)"
@@ -664,6 +693,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                      data-date="<?= $date ?>"
                      data-desc="<?= $desc ?>"
                      data-status="<?= htmlspecialchars($r['status']) ?>"
+                     data-reject-note="<?= $rejectNote ?>"
                      data-notify="<?= !empty($r['resident_ID']) ? '1' : '0' ?>"
                      data-img="<?= $img ?>"
                      data-lat="<?= $lat ?>"
@@ -738,6 +768,13 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                 <?= !empty($reports) ? htmlspecialchars($reports[0]['description']) : 'Select a report to view details.' ?>
               </div>
 
+              <div class="detail-row" id="detailRejectNoteRow" style="<?= !empty($reports) && strtolower((string)$reports[0]['status']) === 'rejected' ? '' : 'display:none;' ?>">
+                <span class="detail-key">Rejection Note</span>
+                <span class="detail-val" id="detailRejectNote">
+                  <?= !empty($reports) ? htmlspecialchars($reports[0]['reject_note'] ?? 'No rejection note provided.') : '—' ?>
+                </span>
+              </div>
+
               <input type="hidden" id="detailReportId" value="<?= !empty($reports) ? intval($reports[0]['report_ID']) : '' ?>">
 
               <?php if (!empty($reports)): ?>
@@ -751,7 +788,7 @@ $initialHeatmapCellsJson = json_encode($heatmapData['cells']);
                 </select>
 
                 <div id="rejectNoteWrap" style="display:none;margin:8px 0 4px;">
-                  <label class="field-label" for="rejectNote" style="margin-bottom:4px;">Rejection Note (optional)</label>
+                  <label class="field-label" for="rejectNote" style="margin-bottom:4px;">Rejection Note (required)</label>
                   <textarea id="rejectNote" rows="2" style="width:100%;resize:vertical;background:#f0f7f2;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'DM Sans',sans-serif;"></textarea>
                 </div>
 
@@ -1016,6 +1053,13 @@ function selectReport(el) {
   document.getElementById('detailDate').textContent     = d.date;
   document.getElementById('detailDesc').textContent     = d.desc;
   document.getElementById('statusSelect').value         = normalizedStatus;
+  const rejectNoteRow = document.getElementById('detailRejectNoteRow');
+  const rejectNoteVal = document.getElementById('detailRejectNote');
+  if (rejectNoteRow && rejectNoteVal) {
+    const note = String(d.rejectNote || '').trim();
+    rejectNoteVal.textContent = note || 'No rejection note provided.';
+    rejectNoteRow.style.display = normalizedStatus === 'rejected' ? 'flex' : 'none';
+  }
   document.getElementById('detailReportId').value       = d.id;
   updateDetailMap(d.lat, d.lng);
 
@@ -1059,9 +1103,11 @@ function saveAction() {
   if (status === 'rejected') {
     const noteEl = document.getElementById('rejectNote');
     const note = noteEl ? noteEl.value.trim() : '';
-    if (note) {
-      form.append('reject_note', note);
+    if (!note) {
+      showToast('Please add a rejection note before rejecting a report.');
+      return;
     }
+    form.append('reject_note', note);
   }
 
   fetch('admin_dashboard.php', { method: 'POST', body: form })

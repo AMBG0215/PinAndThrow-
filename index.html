@@ -188,10 +188,8 @@
 
           <div>
             <br />
-            <label class="field-label">Map Pin</label>
             <div class="map-box" id="mapBox">
               <div id="leafletMap"></div>
-              <div class="map-label-tag">MAP PIN</div>
               <div class="map-coords" id="mapCoords"></div>
             </div>
           </div>
@@ -374,11 +372,126 @@
       var pinnedLatLng = null;
       var mapInstance = null;
       var mapMarker = null;
+      var pinIcon = null;
       var reports = [];
       var selectedPhotos = [];
       var MAX_PHOTOS = 5;
       var activeAddressLookup = 0;
       var activeAddressSuggestLookup = 0;
+      var activeAddressCommitLookup = 0;
+      var PIO_DEL_PILAR_CENTER = [14.5546281, 121.0114164];
+      var PIO_DEL_PILAR_BOUNDS = L.latLngBounds(
+        [14.5475105, 121.0066859],
+        [14.5611702, 121.0160332]
+      );
+      var PIO_DEL_PILAR_POLYGON = [
+        [14.5501993, 121.0066859],
+        [14.550116, 121.0069102],
+        [14.5500694, 121.0071442],
+        [14.5500364, 121.0071968],
+        [14.5499575, 121.0072364],
+        [14.5495472, 121.0072601],
+        [14.5494163, 121.00733],
+        [14.5490087, 121.0075821],
+        [14.548918, 121.0076726],
+        [14.5488699, 121.0078416],
+        [14.5486207, 121.0087686],
+        [14.5485641, 121.0088479],
+        [14.5483419, 121.0089767],
+        [14.5480935, 121.0090864],
+        [14.5481558, 121.0093324],
+        [14.5481657, 121.0093908],
+        [14.5482207, 121.0097138],
+        [14.5482336, 121.0097778],
+        [14.5482414, 121.0098262],
+        [14.5483803, 121.010692],
+        [14.5483925, 121.0107683],
+        [14.5484046, 121.0108507],
+        [14.5484316, 121.011035],
+        [14.5485356, 121.0117304],
+        [14.5486011, 121.0119729],
+        [14.5486551, 121.012135],
+        [14.5487262, 121.0123009],
+        [14.5487507, 121.0123571],
+        [14.5475105, 121.0130279],
+        [14.5475509, 121.0131088],
+        [14.5476008, 121.013209],
+        [14.5476207, 121.0132489],
+        [14.5476392, 121.0132859],
+        [14.5476565, 121.0133206],
+        [14.5477018, 121.0134113],
+        [14.5477093, 121.0134311],
+        [14.547714, 121.0134463],
+        [14.5477239, 121.0135038],
+        [14.5477299, 121.013535],
+        [14.5477373, 121.0135647],
+        [14.5477485, 121.0135923],
+        [14.5477877, 121.0136729],
+        [14.5478006, 121.0136993],
+        [14.5479932, 121.0140775],
+        [14.548103, 121.0142973],
+        [14.5481783, 121.0144571],
+        [14.548214, 121.0145304],
+        [14.5482376, 121.0145771],
+        [14.5483545, 121.0148088],
+        [14.5483969, 121.014946],
+        [14.5485374, 121.0157049],
+        [14.5485736, 121.0159088],
+        [14.5485866, 121.015982],
+        [14.5485927, 121.0160162],
+        [14.5485957, 121.0160332],
+        [14.5487805, 121.0159339],
+        [14.551247, 121.0154158],
+        [14.5517113, 121.0153186],
+        [14.5551083, 121.0146242],
+        [14.5552951, 121.0145975],
+        [14.5584958, 121.0139928],
+        [14.5586098, 121.0139823],
+        [14.558826, 121.013978],
+        [14.559025, 121.0140101],
+        [14.5598927, 121.0143296],
+        [14.5600843, 121.0143916],
+        [14.560991, 121.0147408],
+        [14.5611702, 121.0148057],
+        [14.561094, 121.0145215],
+        [14.5610414, 121.0143049],
+        [14.5609491, 121.0140119],
+        [14.5608136, 121.0136279],
+        [14.5607352, 121.0134393],
+        [14.560664, 121.0132711],
+        [14.5605808, 121.0130764],
+        [14.5604763, 121.0128677],
+        [14.5601185, 121.0121423],
+        [14.5599405, 121.0117855],
+        [14.5597035, 121.0113399],
+        [14.5593932, 121.0107243],
+        [14.5589296, 121.0098129],
+        [14.5581056, 121.0082205],
+        [14.557769, 121.0074923],
+        [14.5554075, 121.0087778],
+        [14.5549751, 121.0090165],
+        [14.5527963, 121.0101666],
+        [14.5526816, 121.0099815],
+        [14.5523908, 121.0092371],
+        [14.5522319, 121.0083941],
+        [14.5522022, 121.0082367],
+        [14.5522394, 121.0079922],
+        [14.5521991, 121.0075923],
+        [14.5521712, 121.0069537],
+        [14.5521969, 121.0069084],
+        [14.5519095, 121.0069861],
+        [14.5517147, 121.0070375],
+        [14.5514318, 121.0071122],
+        [14.5511097, 121.0071973],
+        [14.550776, 121.0072897],
+        [14.5504088, 121.0073898],
+        [14.5503696, 121.0074002],
+        [14.5502766, 121.0070232],
+        [14.5501993, 121.0066859],
+      ];
+      var PIO_DEL_PILAR_VIEWBOX = "121.0066859,14.5611702,121.0160332,14.5475105";
+      var PIO_DEL_PILAR_SEARCH_HINT =
+        "Pio Del Pilar, Makati City, Metro Manila";
       var WASTE_CATEGORY_MAP = {
         Hazardous: 1,
         Pharmaceutical: 2,
@@ -438,6 +551,7 @@
           lat: item.latitude || "",
           lng: item.longitude || "",
           status: normalizeStatus(item.status),
+          rejectNote: item.reject_note || "",
           date: item.timestamp
             ? new Date(item.timestamp).toLocaleDateString("en-PH", {
                 month: "short",
@@ -545,16 +659,204 @@
           });
       }
 
-      function buildNominatimSearchUrl(query) {
+      function isWithinPioDelPilar(latlng) {
+        if (!latlng || !PIO_DEL_PILAR_BOUNDS.contains(latlng)) {
+          return false;
+        }
+
+        // Ray-casting point-in-polygon using lng as x and lat as y.
+        var x = latlng.lng;
+        var y = latlng.lat;
+        var inside = false;
+
+        for (
+          var i = 0, j = PIO_DEL_PILAR_POLYGON.length - 1;
+          i < PIO_DEL_PILAR_POLYGON.length;
+          j = i++
+        ) {
+          var yi = PIO_DEL_PILAR_POLYGON[i][0];
+          var xi = PIO_DEL_PILAR_POLYGON[i][1];
+          var yj = PIO_DEL_PILAR_POLYGON[j][0];
+          var xj = PIO_DEL_PILAR_POLYGON[j][1];
+
+          var intersects =
+            yi > y !== yj > y &&
+            x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+
+          if (intersects) {
+            inside = !inside;
+          }
+        }
+
+        return inside;
+      }
+
+      function showOutOfBoundsToast() {
+        showToast("Please pin within Brgy. Pio Del Pilar only.", true);
+      }
+
+      function updatePinnedLocation(latlng, label) {
+        if (!isWithinPioDelPilar(latlng)) {
+          showOutOfBoundsToast();
+          return false;
+        }
+        pinnedLatLng = latlng;
+        if (mapMarker && mapInstance) {
+          mapInstance.removeLayer(mapMarker);
+        }
+        mapMarker = L.marker(latlng, {
+          icon: pinIcon,
+        }).addTo(mapInstance);
+        if (mapInstance) {
+          mapInstance.flyTo(latlng, 18, {
+            duration: 0.6,
+          });
+        }
+        var coordEl = document.getElementById("mapCoords");
+        coordEl.textContent =
+          latlng.lat.toFixed(5) + " N, " + latlng.lng.toFixed(5) + " E";
+        coordEl.style.display = "block";
+
+        if (label) {
+          document.getElementById("inputAddress").value = label;
+        }
+
+        return true;
+      }
+
+      function clearPinnedLocation() {
+        activeAddressLookup += 1;
+        activeAddressSuggestLookup += 1;
+        if (suggestDebounceTimer) {
+          clearTimeout(suggestDebounceTimer);
+          suggestDebounceTimer = null;
+        }
+        if (mapMarker && mapInstance) {
+          mapInstance.removeLayer(mapMarker);
+          mapMarker = null;
+        }
+        pinnedLatLng = null;
+        document.getElementById("mapCoords").style.display = "none";
+        renderAddressSuggestions([]);
+      }
+
+      function buildNominatimSearchUrl(query, options) {
+        options = options || {};
         var base = "https://nominatim.openstreetmap.org/search";
+        var searchQuery =
+          query + (options.includeHint === false ? "" : " " + PIO_DEL_PILAR_SEARCH_HINT);
         var params = new URLSearchParams({
           format: "jsonv2",
-          q: query,
+          q: searchQuery,
           addressdetails: "1",
-          limit: "5",
-          countrycodes: "ph"
+          limit: String(options.limit || 5),
+          countrycodes: "ph",
         });
+
+        if (options.bounded !== false) {
+          params.set("bounded", "1");
+          params.set("viewbox", PIO_DEL_PILAR_VIEWBOX);
+        }
+
         return base + "?" + params.toString();
+      }
+
+      function pickFirstPlaceInsidePioDelPilar(data) {
+        var places = (Array.isArray(data) ? data : []).filter(function (place) {
+          var lat = parseFloat(place.lat);
+          var lng = parseFloat(place.lon);
+          return (
+            isFinite(lat) &&
+            isFinite(lng) &&
+            isWithinPioDelPilar(L.latLng(lat, lng))
+          );
+        });
+
+        return places.length ? places[0] : null;
+      }
+
+      function geocodeTypedAddress(query, lookupId) {
+        function fetchAttempt(options) {
+          return fetch(buildNominatimSearchUrl(query, options), {
+            headers: {
+              Accept: "application/json",
+              "Accept-Language": "en",
+            },
+          }).then(function (res) {
+            if (!res.ok) {
+              throw new Error("Search failed");
+            }
+            return res.json();
+          });
+        }
+
+        // Attempt 1: strict bounded search with barangay hint.
+        return fetchAttempt({ includeHint: true, bounded: true, limit: 5 })
+          .then(function (data) {
+            var hit = pickFirstPlaceInsidePioDelPilar(data);
+            if (hit) return hit;
+
+            // Attempt 2: fallback without barangay hint but still bounded.
+            return fetchAttempt({ includeHint: false, bounded: true, limit: 10 }).then(
+              function (fallbackData) {
+                return pickFirstPlaceInsidePioDelPilar(fallbackData);
+              }
+            );
+          })
+          .then(function (place) {
+            if (lookupId !== activeAddressCommitLookup) {
+              return false;
+            }
+
+            if (!place) {
+              return false;
+            }
+
+            var lat = parseFloat(place.lat);
+            var lng = parseFloat(place.lon);
+            var latlng = L.latLng(lat, lng);
+            if (!latlng || !isFinite(lat) || !isFinite(lng)) {
+              return false;
+            }
+
+            return updatePinnedLocation(latlng, place.display_name || query);
+          })
+          .catch(function () {
+            if (lookupId !== activeAddressCommitLookup) {
+              return false;
+            }
+            return false;
+          });
+      }
+
+      function commitAddressFromInput(showErrorToast) {
+        var addressInput = document.getElementById("inputAddress");
+        if (!addressInput) {
+          return Promise.resolve(false);
+        }
+
+        var value = addressInput.value.trim();
+        if (!value) {
+          return Promise.resolve(false);
+        }
+
+        activeAddressCommitLookup += 1;
+        var lookupId = activeAddressCommitLookup;
+
+        return geocodeTypedAddress(value, lookupId).then(function (didPin) {
+          if (lookupId !== activeAddressCommitLookup) {
+            return false;
+          }
+
+          if (!didPin && showErrorToast) {
+            showToast(
+              "Address not found inside Brgy. Pio Del Pilar. Please refine the address or pick from suggestions.",
+              true
+            );
+          }
+
+          return didPin;
+        });
       }
 
       function renderAddressSuggestions(items) {
@@ -570,8 +872,16 @@
           div.className = "address-suggest-item";
           div.textContent = item.display_name || "";
           div.addEventListener("click", function () {
-            var input = document.getElementById("inputAddress");
-            input.value = item.display_name || "";
+            var lat = parseFloat(item.lat);
+            var lng = parseFloat(item.lon);
+            var latlng = L.latLng(lat, lng);
+            if (!latlng || !isFinite(lat) || !isFinite(lng)) {
+              showToast("Unable to pin that address.", true);
+              return;
+            }
+            if (!updatePinnedLocation(latlng, item.display_name || "")) {
+              return;
+            }
             list.style.display = "none";
           });
           list.appendChild(div);
@@ -584,6 +894,7 @@
         var value = e.target.value.trim();
         if (!value || value.length < 2) {
           renderAddressSuggestions([]);
+          clearPinnedLocation();
           return;
         }
         if (suggestDebounceTimer) {
@@ -604,7 +915,28 @@
             })
             .then(function (data) {
               if (lookupId !== activeAddressSuggestLookup) return;
-              renderAddressSuggestions(Array.isArray(data) ? data : []);
+              var places = (Array.isArray(data) ? data : []).filter(function (place) {
+                var lat = parseFloat(place.lat);
+                var lng = parseFloat(place.lon);
+                return (
+                  isFinite(lat) &&
+                  isFinite(lng) &&
+                  isWithinPioDelPilar(L.latLng(lat, lng))
+                );
+              });
+              renderAddressSuggestions(places);
+
+              if (places.length > 0) {
+                var place = places[0];
+                var lat = parseFloat(place.lat);
+                var lng = parseFloat(place.lon);
+                var latlng = L.latLng(lat, lng);
+                if (latlng && isFinite(lat) && isFinite(lng)) {
+                  updatePinnedLocation(latlng, place.display_name || value);
+                }
+              } else {
+                renderAddressSuggestions([]);
+              }
             })
             .catch(function () {
               if (lookupId !== activeAddressSuggestLookup) return;
@@ -644,13 +976,17 @@
       function initMap() {
         var map = L.map("leafletMap", {
           zoomControl: true,
-        }).setView([14.5547, 121.0244], 15);
+          minZoom: 17,
+          maxBounds: PIO_DEL_PILAR_BOUNDS,
+          maxBoundsViscosity: 1.0,
+        }).setView(PIO_DEL_PILAR_CENTER, 18);
+        map.setMaxBounds(PIO_DEL_PILAR_BOUNDS);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 19,
         }).addTo(map);
 
-        var pinIcon = L.divIcon({
+        pinIcon = L.divIcon({
           className: "",
           html: '<div style="width:18px;height:18px;background:#e53e3e;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>',
           iconSize: [18, 18],
@@ -658,21 +994,17 @@
         });
 
         map.on("click", function (e) {
-          pinnedLatLng = e.latlng;
-          if (mapMarker) {
-            map.removeLayer(mapMarker);
+          if (!updatePinnedLocation(e.latlng)) {
+            return;
           }
-          mapMarker = L.marker(e.latlng, {
-            icon: pinIcon,
-          }).addTo(map);
-          var coordEl = document.getElementById("mapCoords");
-          coordEl.textContent =
-            e.latlng.lat.toFixed(5) + " N, " + e.latlng.lng.toFixed(5) + " E";
-          coordEl.style.display = "block";
           reverseGeocodePin(e.latlng.lat, e.latlng.lng);
         });
 
         mapInstance = map;
+        map.fitBounds(PIO_DEL_PILAR_BOUNDS, {
+          padding: [24, 24],
+          maxZoom: 18,
+        });
         setTimeout(function () {
           map.invalidateSize();
         }, 300);
@@ -805,12 +1137,7 @@
         selectedPhotos = [];
         document.getElementById("photoInput").value = "";
         renderPhotoPreviews();
-        if (mapMarker && mapInstance) {
-          mapInstance.removeLayer(mapMarker);
-          mapMarker = null;
-        }
-        pinnedLatLng = null;
-        document.getElementById("mapCoords").style.display = "none";
+        clearPinnedLocation();
         showToast("Form cleared.");
       }
 
@@ -838,6 +1165,10 @@
         }
         if (!pinnedLatLng) {
           showToast("Please click the map to pin a location.", true);
+          return;
+        }
+        if (!isWithinPioDelPilar(pinnedLatLng)) {
+          showOutOfBoundsToast();
           return;
         }
         if (photos && photos.length > MAX_PHOTOS) {
@@ -963,6 +1294,7 @@
               .map(function (r) {
                 var trimmedDesc =
                   r.desc.length > 60 ? r.desc.substring(0, 60) + "..." : r.desc;
+                var rejectNote = String(r.rejectNote || "").trim();
                 return (
                   '<div class="history-item">' +
                   '<div class="h-id">' +
@@ -978,6 +1310,11 @@
                   '">' +
                   escapeHtml(getStatusLabel(r.status)) +
                   "</span>" +
+                  (r.status === "rejected"
+                    ? '<div class="h-note">Reason: ' +
+                      escapeHtml(rejectNote || "No rejection note provided.") +
+                      "</div>"
+                    : "") +
                   "</div>"
                 );
               })
@@ -1069,6 +1406,15 @@
       var addrInput = document.getElementById("inputAddress");
       if (addrInput) {
         addrInput.addEventListener("input", handleAddressInput);
+        addrInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitAddressFromInput(true);
+          }
+        });
+        addrInput.addEventListener("blur", function () {
+          commitAddressFromInput(false);
+        });
       }
     </script>
   </body>

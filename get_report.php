@@ -35,7 +35,7 @@ if ($report_ID > 0 && $resident_ID <= 0 && $resident_email === '' && !in_array($
 try {
     $query = "
         SELECT
-            r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
+            r.report_ID, r.description, r.imageUrl, r.status, r.reject_note, r.timestamp,
             c.categoryName,
             l.latitude, l.longitude, l.locationName,
             u.firstName, u.lastName, u.email

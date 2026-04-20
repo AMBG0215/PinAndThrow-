@@ -215,41 +215,43 @@ nav {
 </div>
 
 <script>
-var ADMIN_LOGIN = {
-  username: 'admin',
-  email: 'admin@pinandthrow.com',
-  password: 'admin123'
-};
+  var DEMO_USERS = [
+    {
+      username: 'resident',
+      email: 'resident@pinandthrow.com',
+      password: 'password123',
+      name: 'Juan dela Cruz',
+      avatar: 'https://i.pravatar.cc/80?img=11'
+    },
+    {
+      username: 'feone',
+      email: 'feone@pinandthrow.com',
+      password: 'feone123',
+      name: 'Feone Marie Remoquillo',
+      avatar: 'https://i.pravatar.cc/80?img=47'
+    },
+    {
+      username: 'maria',
+      email: 'maria@pinandthrow.com',
+      password: 'maria123',
+      name: 'Maria Santos',
+      avatar: 'https://i.pravatar.cc/80?img=23'
+    }
+  ];
 
-var DEMO_USERS = [
-  { username: 'resident',  email: 'resident@pinandthrow.com', password: 'password123', name: 'Juan dela Cruz',        avatar: 'https://i.pravatar.cc/80?img=11' },
-  { username: 'feone',     email: 'feone@pinandthrow.com',    password: 'feone123',    name: 'Feone Marie Remoquillo', avatar: 'https://i.pravatar.cc/80?img=47' },
-  { username: 'maria',     email: 'maria@pinandthrow.com',    password: 'maria123',    name: 'Maria Santos',          avatar: 'https://i.pravatar.cc/80?img=23' }
-];
+  var ADMIN_LOGIN = {
+    username: 'admin',
+    email: 'admin@pinandthrow.com',
+    password: 'admin123'
+  };
 
-function getAllUsers() {
-  var registered = JSON.parse(localStorage.getItem('pat_registered_users') || '[]');
-  return DEMO_USERS.concat(registered);
-}
-
-function showError(msg) {
-  var el = document.getElementById('errorMsg');
-  el.textContent = msg;
-  el.classList.add('show');
-}
-
-function doLogin() {
-  var user = document.getElementById('inputUser').value.trim();
-  var pass = document.getElementById('inputPass').value;
-  document.getElementById('errorMsg').classList.remove('show');
-
-  if (!user || !pass) {
-    showError('Please fill in both fields.');
-    return;
+  function showError(msg) {
+    var el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
   }
 
-  // Route admin login through PHP so session role is set server-side.
-  if ((user === ADMIN_LOGIN.username || user === ADMIN_LOGIN.email) && pass === ADMIN_LOGIN.password) {
+  function submitAdminLogin(password) {
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = 'admin_dashboard.php';
@@ -263,37 +265,61 @@ function doLogin() {
     var passInput = document.createElement('input');
     passInput.type = 'hidden';
     passInput.name = 'login_password';
-    passInput.value = pass;
+    passInput.value = password;
     form.appendChild(passInput);
 
     document.body.appendChild(form);
     form.submit();
-    return;
   }
 
-  var allUsers = getAllUsers();
-  var found = null;
-  for (var i = 0; i < allUsers.length; i++) {
-    var u = allUsers[i];
-    if ((u.username === user || u.email === user) && u.password === pass) { found = u; break; }
+  function doLogin() {
+    var user = document.getElementById('inputUser').value.trim();
+    var pass = document.getElementById('inputPass').value;
+    document.getElementById('errorMsg').classList.remove('show');
+
+    if (!user || !pass) {
+      showError('Please fill in both fields.');
+      return;
+    }
+
+    if ((user === ADMIN_LOGIN.username || user === ADMIN_LOGIN.email) && pass === ADMIN_LOGIN.password) {
+      submitAdminLogin(pass);
+      return;
+    }
+
+    var found = null;
+    for (var i = 0; i < DEMO_USERS.length; i++) {
+      var u = DEMO_USERS[i];
+      if ((u.username === user || u.email === user) && u.password === pass) {
+        found = u;
+        break;
+      }
+    }
+
+    if (!found) {
+      showError('Invalid username/email or password.');
+      return;
+    }
+
+    localStorage.setItem(
+      'pat_session',
+      JSON.stringify({
+        name: found.name,
+        username: found.username,
+        email: found.email || null,
+        avatar: found.avatar || null
+      })
+    );
+    window.location.href = 'index.html';
   }
 
-  if (!found) {
-    showError('Invalid username/email or password.');
-    return;
+  document.getElementById('inputPass').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  if (localStorage.getItem('pat_session')) {
+    window.location.href = 'index.html';
   }
-
-  localStorage.setItem('pat_session', JSON.stringify({ name: found.name, username: found.username, email: found.email || null, avatar: found.avatar || null }));
-  window.location.href = 'index.html';
-}
-
-document.getElementById('inputPass').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
-});
-
-if (localStorage.getItem('pat_session')) {
-  window.location.href = 'index.html';
-}
 </script>
 </body>
 </html>

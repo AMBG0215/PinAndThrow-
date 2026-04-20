@@ -68,6 +68,7 @@ CREATE TABLE `reports` (
   `category_id` int(11) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `imageUrl` varchar(255) DEFAULT NULL,
+  `reject_note` text DEFAULT NULL,
   `status` enum('Pending','Verified','InProgress','Resolved','Rejected') DEFAULT 'Pending',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
