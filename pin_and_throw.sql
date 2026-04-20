@@ -66,9 +66,10 @@ CREATE TABLE `reports` (
   `report_ID` int(11) NOT NULL,
   `resident_ID` int(11) DEFAULT NULL,
   `category_id` int(11) DEFAULT NULL,
+  `officer_ID` int(11) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `imageUrl` varchar(255) DEFAULT NULL,
-  `status` enum('Pending','Verified','Resolved','Rejected') DEFAULT 'Pending',
+  `status` enum('pending','verified','inprogress','resolved','rejected') NOT NULL DEFAULT 'pending',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -83,8 +84,21 @@ CREATE TABLE `users` (
   `firstName` varchar(100) DEFAULT NULL,
   `lastName` varchar(100) DEFAULT NULL,
   `email` varchar(150) DEFAULT NULL,
-  `role` enum('Resident','Officer') DEFAULT NULL,
+  `role` enum('Resident','Officer','Admin') DEFAULT 'Resident',
   `password` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `notification_ID` int(11) NOT NULL,
+  `report_ID` int(11) NOT NULL,
+  `user_ID` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `isRead` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -109,7 +123,9 @@ ALTER TABLE `locations`
 --
 ALTER TABLE `reports`
   ADD PRIMARY KEY (`report_ID`),
-  ADD KEY `category_id` (`category_id`);
+  ADD KEY `resident_ID` (`resident_ID`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `officer_ID` (`officer_ID`);
 
 --
 -- Indexes for table `users`
@@ -117,6 +133,14 @@ ALTER TABLE `reports`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_ID`),
   ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`notification_ID`),
+  ADD KEY `report_ID` (`report_ID`),
+  ADD KEY `user_ID` (`user_ID`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -147,6 +171,12 @@ ALTER TABLE `users`
   MODIFY `user_ID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `notification_ID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -160,7 +190,16 @@ ALTER TABLE `locations`
 -- Constraints for table `reports`
 --
 ALTER TABLE `reports`
-  ADD CONSTRAINT `reports_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`);
+  ADD CONSTRAINT `reports_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`),
+  ADD CONSTRAINT `reports_ibfk_2` FOREIGN KEY (`resident_ID`) REFERENCES `users` (`user_ID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `reports_ibfk_3` FOREIGN KEY (`officer_ID`) REFERENCES `users` (`user_ID`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`report_ID`) REFERENCES `reports` (`report_ID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`user_ID`) REFERENCES `users` (`user_ID`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
