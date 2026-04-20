@@ -188,19 +188,8 @@
 
           <div>
             <br />
-            <label class="field-label">Map Pin</label>
-            <div class="map-search-wrap">
-              <input
-                type="text"
-                id="locationSearch"
-                placeholder="Search Pio Del Pilar street, block, or landmark"
-                autocomplete="off"
-              />
-              <div class="location-suggestions" id="locationSuggestions"></div>
-            </div>
             <div class="map-box" id="mapBox">
               <div id="leafletMap"></div>
-              <div class="map-label-tag">MAP PIN</div>
               <div class="map-coords" id="mapCoords"></div>
             </div>
           </div>
@@ -384,19 +373,20 @@
       var mapInstance = null;
       var mapMarker = null;
       var mapSearchTimeout = null;
+      var addressSearchTimeout = null;
       var reports = JSON.parse(localStorage.getItem("pat_reports") || "[]");
       var selectedPhotos = [];
       var MAX_PHOTOS = 5;
-      var PIO_DEL_PILAR_CENTER = [14.5547, 121.0244];
+      var PIO_DEL_PILAR_CENTER = [14.5546281, 121.0114164];
       var PIO_DEL_PILAR_BOUNDS = L.latLngBounds(
-        [14.5455, 121.0145],
-        [14.5638, 121.0338]
+        [14.5475105, 121.0066859],
+        [14.5611702, 121.0160332]
       );
       var PIO_DEL_PILAR_VIEW_BOUNDS = [
-        [14.5455, 121.0145],
-        [14.5638, 121.0338],
+        [14.5475105, 121.0066859],
+        [14.5611702, 121.0160332],
       ];
-      var PIO_DEL_PILAR_SEARCH_BBOX = "121.0145,14.5455,121.0338,14.5638";
+      var PIO_DEL_PILAR_SEARCH_BBOX = "121.0066859,14.5475105,121.0160332,14.5611702";
 
       function initSession() {
         var raw = localStorage.getItem("pat_session");
@@ -420,6 +410,15 @@
         }
       }
 
+      function clearPinnedLocation() {
+        if (mapMarker && mapInstance) {
+          mapInstance.removeLayer(mapMarker);
+          mapMarker = null;
+        }
+        pinnedLatLng = null;
+        document.getElementById("mapCoords").style.display = "none";
+      }
+
       function doLogout() {
         localStorage.removeItem("pat_session");
         window.location.reload();
@@ -430,9 +429,8 @@
           zoomControl: true,
           maxBounds: PIO_DEL_PILAR_VIEW_BOUNDS,
           maxBoundsViscosity: 1,
-          minZoom: 15,
-        }).setView(PIO_DEL_PILAR_CENTER, 16);
-        map.fitBounds(PIO_DEL_PILAR_VIEW_BOUNDS);
+          minZoom: 16,
+        }).setView(PIO_DEL_PILAR_CENTER, 17);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 19,
@@ -463,8 +461,90 @@
           coordEl.style.display = "block";
 
           if (label) {
-            document.getElementById("locationSearch").value = label;
+            var locationSearchEl = document.getElementById("locationSearch");
+            if (locationSearchEl) {
+              locationSearchEl.value = label;
+            }
+            document.getElementById("inputAddress").value = label;
           }
+        }
+
+        function geocodeAddressToPin(query) {
+          if (!query) {
+            clearPinnedLocation();
+            return;
+          }
+
+          var url =
+            "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&bounded=1&viewbox=" +
+            encodeURIComponent(PIO_DEL_PILAR_SEARCH_BBOX) +
+            "&countrycodes=ph&q=" +
+            encodeURIComponent(query + " Pio Del Pilar Makati Metro Manila");
+
+          fetch(url, {
+            headers: {
+              Accept: "application/json",
+            },
+          })
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              var filtered = data.filter(function (place) {
+                var haystack = (place.display_name || "").toLowerCase();
+                var latlng = L.latLng(parseFloat(place.lat), parseFloat(place.lon));
+                return (
+                  haystack.indexOf("pio del pilar") !== -1 &&
+                  PIO_DEL_PILAR_BOUNDS.contains(latlng)
+                );
+              });
+
+              if (!filtered.length) {
+                return;
+              }
+
+              var place = filtered[0];
+              var latlng = L.latLng(parseFloat(place.lat), parseFloat(place.lon));
+
+              if (mapInstance) {
+                mapInstance.flyTo(latlng, 18, {
+                  duration: 0.6,
+                });
+              }
+
+              updatePinnedLocation(latlng, place.display_name);
+            })
+            .catch(function () {
+              showToast("Location search is temporarily unavailable.", true);
+            });
+        }
+
+        function isPioDelPilarAddress(data) {
+          if (!data) return false;
+
+          var pieces = [];
+          if (data.display_name) {
+            pieces.push(data.display_name);
+          }
+          if (data.address) {
+            var addr = data.address;
+            [
+              "barangay",
+              "suburb",
+              "neighbourhood",
+              "village",
+              "quarter",
+              "city_district",
+              "city",
+            ].forEach(function (key) {
+              if (addr[key]) {
+                pieces.push(addr[key]);
+              }
+            });
+          }
+
+          var haystack = pieces.join(" ").toLowerCase();
+          return haystack.indexOf("pio del pilar") !== -1;
         }
 
         function reverseGeocodePinnedLocation(latlng) {
@@ -484,6 +564,14 @@
               return response.json();
             })
             .then(function (data) {
+              if (!isPioDelPilarAddress(data)) {
+                showToast(
+                  "Please pin a location inside Barangay Pio Del Pilar only.",
+                  true
+                );
+                return;
+              }
+
               var label =
                 (data && (data.name || data.display_name)) ||
                 latlng.lat.toFixed(5) + ", " + latlng.lng.toFixed(5);
@@ -513,7 +601,10 @@
       }
 
       function clearLocationSuggestions() {
-        document.getElementById("locationSuggestions").innerHTML = "";
+        var suggestionsEl = document.getElementById("locationSuggestions");
+        if (suggestionsEl) {
+          suggestionsEl.innerHTML = "";
+        }
       }
 
       function escapeHtml(value) {
@@ -522,6 +613,9 @@
 
       function renderLocationSuggestions(places) {
         var wrap = document.getElementById("locationSuggestions");
+        if (!wrap) {
+          return;
+        }
         if (!places.length) {
           wrap.innerHTML =
             '<div class="location-suggestion-empty">No matching place found inside Pio Del Pilar.</div>';
@@ -561,7 +655,10 @@
           return;
         }
 
-        document.getElementById("locationSearch").value = place.display_name;
+        var input = document.getElementById("locationSearch");
+        if (input) {
+          input.value = place.display_name;
+        }
         clearLocationSuggestions();
         mapInstance.flyTo(latlng, 18, {
           duration: 0.6,
@@ -607,25 +704,29 @@
       }
 
       function initLocationSearch() {
-        var input = document.getElementById("locationSearch");
+        var input = document.getElementById("inputAddress");
+        if (!input) {
+          input = document.getElementById("locationSearch");
+        }
         if (!input) return;
 
         input.addEventListener("input", function () {
           var value = input.value.trim();
 
-          clearTimeout(mapSearchTimeout);
+          clearTimeout(addressSearchTimeout);
           if (!value) {
-            clearLocationSuggestions();
+            clearPinnedLocation();
             return;
           }
 
-          mapSearchTimeout = setTimeout(function () {
-            fetchLocationSuggestions(value);
+          addressSearchTimeout = setTimeout(function () {
+            geocodeAddressToPin(value);
           }, 250);
         });
 
         input.addEventListener("keydown", function (e) {
           if (e.key === "Escape") {
+            clearTimeout(addressSearchTimeout);
             clearLocationSuggestions();
           }
         });
@@ -744,6 +845,11 @@
           ? session.name
           : "";
         document.getElementById("inputAddress").value = "";
+        var locationSearchEl = document.getElementById("locationSearch");
+        if (locationSearchEl) {
+          locationSearchEl.value = "";
+        }
+        clearLocationSuggestions();
         document.getElementById("inputDesc").value = "";
         selectedWaste = "";
         var header = document.getElementById("wasteDropHeader");
@@ -758,12 +864,7 @@
         selectedPhotos = [];
         document.getElementById("photoInput").value = "";
         renderPhotoPreviews();
-        if (mapMarker && mapInstance) {
-          mapInstance.removeLayer(mapMarker);
-          mapMarker = null;
-        }
-        pinnedLatLng = null;
-        document.getElementById("mapCoords").style.display = "none";
+        clearPinnedLocation();
         showToast("Form cleared.");
       }
 
@@ -794,6 +895,10 @@
         }
         if (!pinnedLatLng) {
           showToast("Please click the map to pin a location.", true);
+          return;
+        }
+        if (!PIO_DEL_PILAR_BOUNDS.contains(pinnedLatLng)) {
+          showToast("Only pins inside Pio Del Pilar are allowed.", true);
           return;
         }
         if (!photos || photos.length === 0) {

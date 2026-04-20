@@ -70,6 +70,7 @@ CREATE TABLE `reports` (
   `description` text DEFAULT NULL,
   `imageUrl` varchar(255) DEFAULT NULL,
   `status` enum('pending','verified','inprogress','resolved','rejected') NOT NULL DEFAULT 'pending',
+  `reject_note` text DEFAULT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

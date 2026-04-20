@@ -3,6 +3,16 @@
 session_start();
 require 'database.php';
 
+// Ensure rejection notes can be stored even on older database snapshots.
+try {
+  $colCheck = $pdo->query("SHOW COLUMNS FROM Reports LIKE 'reject_note'");
+  if (!$colCheck || $colCheck->rowCount() === 0) {
+    $pdo->exec("ALTER TABLE Reports ADD COLUMN reject_note TEXT NULL AFTER status");
+  }
+} catch (Throwable $e) {
+  // Non-fatal: keep dashboard usable even if migration check fails.
+}
+
 
 // ── HARDCODED ADMIN ACCOUNT ──────────────────────────────────
 $hardcoded_email = "admin@pinandthrow.com";
@@ -33,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   header('Content-Type: application/json');
   $report_id = intval($_POST['report_id']);
   $new_status = $_POST['status'];
+  $reject_note = trim($_POST['reject_note'] ?? '');
   $officer_id = $_SESSION['user_id'];
 
   $allowed = ['pending', 'verified', 'inprogress', 'resolved', 'rejected'];
@@ -41,9 +52,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
   }
 
-  // Update report status and assign officer
-  $stmt = $pdo->prepare("UPDATE Reports SET status = ?, officer_ID = ? WHERE report_ID = ?");
-  $stmt->execute([$new_status, $officer_id, $report_id]);
+  if ($new_status === 'rejected' && $reject_note === '') {
+    echo json_encode(['success' => false, 'message' => 'Please provide a rejection note.']);
+    exit();
+  }
+
+  $saved_note = $new_status === 'rejected' ? $reject_note : null;
+
+  // Update report status, assign officer, and save/clear rejection note.
+  $stmt = $pdo->prepare("UPDATE Reports SET status = ?, officer_ID = ?, reject_note = ? WHERE report_ID = ?");
+  $stmt->execute([$new_status, $officer_id, $saved_note, $report_id]);
 
   // Insert a notification for the resident
   $msgMap = [
@@ -54,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     'pending' => 'Your report status has been reset to pending.',
   ];
   $message = $msgMap[$new_status] ?? 'Your report status has been updated.';
+  if ($new_status === 'rejected' && $saved_note !== null) {
+    $message .= ' Reason: ' . $saved_note;
+  }
 
   // Get the resident_ID from the report
   $res = $pdo->prepare("SELECT resident_ID FROM Reports WHERE report_ID = ?");
@@ -65,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $notif->execute([$report_id, $report['resident_ID'], $message]);
   }
 
-  echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+  echo json_encode(['success' => true, 'message' => 'Status updated successfully', 'reject_note' => $saved_note]);
   exit();
 }
 
@@ -86,7 +107,7 @@ if (!in_array($active_tab, $allowed_tabs))
   $active_tab = 'pending';
 
 $stmt = $pdo->prepare("
-    SELECT r.report_ID, r.description, r.imageUrl, r.status, r.timestamp,
+  SELECT r.report_ID, r.description, r.imageUrl, r.status, r.reject_note, r.timestamp,
            u.firstName, u.lastName,
            l.locationName, l.latitude, l.longitude
     FROM Reports r
@@ -960,6 +981,26 @@ function statusLabel($s)
       border-color: var(--accent);
     }
 
+    .note-input {
+      width: 100%;
+      min-height: 74px;
+      resize: vertical;
+      background: #f0f7f2;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    .note-input:focus {
+      border-color: var(--accent);
+    }
+
     .btn-primary {
       width: 100%;
       background: #1a7a3e;
@@ -1408,6 +1449,7 @@ function statusLabel($s)
                     $name = htmlspecialchars($r['firstName'] . ' ' . $r['lastName']);
                     $loc = htmlspecialchars($r['locationName'] ?? 'Unknown location');
                     $desc = htmlspecialchars($r['description']);
+                    $rejectNote = htmlspecialchars($r['reject_note'] ?? '');
                     $date = date('M d, Y · h:i A', strtotime($r['timestamp']));
                     $cls = statusClass($r['status']);
                     $lbl = statusLabel($r['status']);
@@ -1418,7 +1460,8 @@ function statusLabel($s)
                     <div class="report-row <?= $i === 0 ? 'selected' : '' ?>" onclick="selectReport(this)"
                       data-id="<?= intval($r['report_ID']) ?>" data-reporter="<?= $name ?>" data-loc="<?= $loc ?>"
                       data-date="<?= $date ?>" data-desc="<?= $desc ?>" data-status="<?= htmlspecialchars($r['status']) ?>"
-                      data-img="<?= $img ?>" data-lat="<?= $lat ?>" data-lng="<?= $lng ?>">
+                      data-img="<?= $img ?>" data-lat="<?= $lat ?>" data-lng="<?= $lng ?>"
+                      data-reject-note="<?= $rejectNote ?>">
                       <div class="report-thumb">
                         <?php if ($img): ?>
                           <img src="<?= $img ?>" alt="Proof image">
@@ -1502,6 +1545,9 @@ function statusLabel($s)
                   <option value="resolved">Resolved</option>
                   <option value="rejected">Rejected</option>
                 </select>
+
+                <div class="field-label">Rejection Note (required for Rejected)</div>
+                <textarea class="note-input" id="rejectNoteInput" placeholder="State why this report was rejected...\nExample: Photo is unclear and location cannot be verified."><?= !empty($reports) ? htmlspecialchars($reports[0]['reject_note'] ?? '') : '' ?></textarea>
 
                 <button class="btn-primary" onclick="saveAction()">💾 Save &amp; Notify Resident</button>
                 <button class="btn-danger" onclick="rejectReport()">✕ Reject Report</button>
@@ -1708,6 +1754,7 @@ function statusLabel($s)
       document.getElementById('detailDesc').textContent = d.desc;
       document.getElementById('statusSelect').value = d.status;
       document.getElementById('detailReportId').value = d.id;
+      document.getElementById('rejectNoteInput').value = d.rejectNote || '';
       document.getElementById('detailCoords').textContent = d.lat ? d.lat + '° N, ' + d.lng + '° E' : 'No coordinates';
 
       const badge = document.getElementById('detailBadge');
@@ -1735,12 +1782,19 @@ function statusLabel($s)
     function saveAction() {
       const reportId = document.getElementById('detailReportId').value;
       const status = document.getElementById('statusSelect').value;
+      const rejectNote = document.getElementById('rejectNoteInput').value.trim();
       if (!reportId) return;
+
+      if (status === 'rejected' && !rejectNote) {
+        showToast('❌ Please add a rejection note first.');
+        return;
+      }
 
       const form = new FormData();
       form.append('action', 'update_status');
       form.append('report_id', reportId);
       form.append('status', status);
+      form.append('reject_note', rejectNote);
 
       fetch('admin_dashboard.php', { method: 'POST', body: form })
         .then(r => r.json())
@@ -1755,7 +1809,13 @@ function statusLabel($s)
             if (pill) { pill.textContent = statusLabel(status); pill.className = 'status-pill ' + statusClass(status); }
             // Update data attribute
             const row = document.querySelector('.report-row.selected');
-            if (row) row.dataset.status = status;
+            if (row) {
+              row.dataset.status = status;
+              row.dataset.rejectNote = data.reject_note || '';
+            }
+            if (status !== 'rejected') {
+              document.getElementById('rejectNoteInput').value = '';
+            }
           } else {
             showToast('❌ Error: ' + data.message);
           }

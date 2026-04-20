@@ -21,6 +21,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $longitude = $_POST['longitude'] ?? null;
     $locationName = $_POST['locationName'] ?? '';
 
+    if (!is_numeric($latitude) || !is_numeric($longitude)) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid location coordinates.']);
+        exit;
+    }
+
+    $latitude = (float)$latitude;
+    $longitude = (float)$longitude;
+
+    // Enforce reporting only within Barangay Pio Del Pilar bounding area.
+    $minLat = 14.5475105;
+    $maxLat = 14.5611702;
+    $minLng = 121.0066859;
+    $maxLng = 121.0160332;
+
+    if ($latitude < $minLat || $latitude > $maxLat || $longitude < $minLng || $longitude > $maxLng) {
+        echo json_encode(['status' => 'error', 'message' => 'Pinned location must be inside Barangay Pio Del Pilar.']);
+        exit;
+    }
+
     try {
         $pdo->beginTransaction();
 
